@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Watchlist — StockPulse{% endblock %}
+{% block content %}
+<div class="bc"><a href="/">Home</a><span class="sep">/</span><span>Watchlist</span></div>
+<div class="sh"><span class="st"><i class="bi bi-bookmark-star" style="color:var(--gold)"></i> My Watchlist ({{ watchlist|length }})</span></div>
+
+{% if watchlist %}
+<div class="card" style="margin-bottom:16px">
+    {% for s in watchlist %}
+    <a href="/stock/{{ s.symbol }}" class="srow">
+        <div class="srow-left">
+            <div class="srow-sym">
+                {{ s.symbol }}
+                <span class="exb {{ 'nse' if s.exchange=='NSE' else 'bse' }}">{{ s.exchange }}</span>
+                {% if s.alert %}<span class="wl-alert"><i class="bi bi-bell-fill" style="font-size:.5rem"></i> {{ s.alert }}</span>{% endif %}
+            </div>
+            <div class="srow-name">{{ s.name }}</div>
+        </div>
+        <div class="srow-right">
+            <div class="srow-price">₹{{ "{:,.2f}".format(s.price) }}</div>
+            <div class="srow-chg">
+                <span class="pill {{ 'up' if s.change_pct>=0 else 'down' }}">
+                    <i class="bi {{ 'bi-caret-up-fill' if s.change_pct>=0 else 'bi-caret-down-fill' }}" style="font-size:.45rem"></i>
+                    {{ "+" if s.change_pct>=0 else "" }}{{ s.change_pct }}%
+                </span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Watchlist Summary -->
+<div class="g2 g2-m1" style="margin-bottom:16px">
+    <div class="widget">
+        <div class="widget-hdr"><span class="widget-title" style="font-size:.75rem"><i class="bi bi-graph-up" style="color:var(--green)"></i> Portfolio Snapshot</span></div>
+        <div class="widget-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                {% set gainers_count = watchlist|selectattr('change_pct', 'ge', 0)|list|length %}
+                {% set losers_count = watchlist|length - gainers_count %}
+                <div style="text-align:center">
+                    <div style="font-size:1.3rem;font-weight:800;color:var(--green)">{{ gainers_count }}</div>
+                    <div style="font-size:.6rem;color:var(--text3);text-transform:uppercase">Gaining</div>
+                </div>
+                <div style="text-align:center">
+                    <div style="font-size:1.3rem;font-weight:800;color:var(--red)">{{ losers_count }}</div>
+                    <div style="font-size:.6rem;color:var(--text3);text-transform:uppercase">Losing</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="widget">
+        <div class="widget-hdr"><span class="widget-title" style="font-size:.75rem"><i class="bi bi-bell" style="color:var(--gold)"></i> Active Alerts</span></div>
+        <div class="widget-body">
+            {% set alerts_count = watchlist|selectattr('alert')|list|length %}
+            <div style="text-align:center">
+                <div style="font-size:1.3rem;font-weight:800;color:var(--gold)">{{ alerts_count }}</div>
+                <div style="font-size:.6rem;color:var(--text3);text-transform:uppercase">Price Alerts Set</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <i class="bi bi-bookmark-star"></i>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:4px">No stocks in watchlist</div>
+        <div style="font-size:.72rem">Browse <a href="/stocks" style="color:var(--accent)">All Stocks</a> and add them to your watchlist</div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

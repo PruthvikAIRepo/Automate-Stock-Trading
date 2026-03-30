@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Sectors — StockPulse{% endblock %}
+{% block content %}
+<div class="bc"><a href="/">Home</a><span class="sep">/</span><span>Sectors</span></div>
+<div class="sh"><span class="st"><i class="bi bi-grid" style="color:var(--purple)"></i> All Sectors ({{ sectors|length }})</span></div>
+<p style="font-size:.72rem;color:var(--text3);margin:-8px 0 14px">NSE Industry Classification — 12 Macro Sectors + Others</p>
+<div class="g2 g2-m1">
+    {% for sector in sectors %}
+    <a href="/sector/{{ sector.slug }}"><div class="sec-card">
+        <div class="sec-icon" style="background:{{ sector.color }}15;color:{{ sector.color }}"><i class="bi {{ sector.icon }}" style="font-size:1.2rem"></i></div>
+        <div class="sec-info">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <div class="sec-nm">{{ sector.name }}</div>
+                <span class="pill {{ 'up' if sector.avg_change>=0 else 'down' }}">{{ "+" if sector.avg_change>=0 else "" }}{{ sector.avg_change }}%</span>
+            </div>
+            <div class="sec-meta">{{ sector.stock_count }} stocks &middot; {{ sector.industry_count }} industries</div>
+            <div class="chip-row">{% for s in sector.top_stocks[:4] %}<span class="chip"><span class="chip-sym">{{ s.symbol }}</span><span class="{{ 'text-up' if s.change_pct>=0 else 'text-down' }}">₹{{ "{:,.0f}".format(s.price) }}</span></span>{% endfor %}</div>
+        </div>
+    </div></a>
+    {% endfor %}
+</div>
+{% endblock %}

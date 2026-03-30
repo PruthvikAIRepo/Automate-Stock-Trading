@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% block title %}StockPulse — Indian Stock Market Dashboard{% endblock %}
+
+{% block content %}
+<div class="content-grid">
+
+<!-- ═══ LEFT COLUMN ═══ -->
+<div class="content-grid-main">
+
+<!-- Quick Stats (mobile) -->
+<div class="mobile-only" style="margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+        <div class="stat-card"><div class="stat-val text-up" style="font-size:1rem">{{ total_stocks }}</div><div class="stat-lbl">Stocks</div></div>
+        <div class="stat-card"><div class="stat-val" style="font-size:1rem;color:var(--accent)">{{ sectors|length }}</div><div class="stat-lbl">Sectors</div></div>
+        <div class="stat-card"><div class="stat-val" style="font-size:1rem;color:var(--gold)">{{ total_indices }}</div><div class="stat-lbl">Indices</div></div>
+        <div class="stat-card">
+            <div class="stat-val" style="font-size:1rem;color:var(--green)">{{ "%.1f"|format(breadth.advances / breadth.declines) }}</div>
+            <div class="stat-lbl">A/D</div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Market Pulse -->
+<div class="ai-pulse-card ai-glow" style="margin-bottom:16px">
+    <div class="ai-pulse-hdr">
+        <div style="display:flex;align-items:center;gap:6px"><span class="ai-badge"><i class="bi bi-stars"></i> AI</span><span style="font-size:.8rem;font-weight:700">Market Pulse</span></div>
+        <span style="font-size:.58rem;color:var(--text3)">Updated 2 min ago</span>
+    </div>
+    <div class="ai-pulse-body">
+        <p style="font-size:.78rem;line-height:1.55;color:var(--text2);margin-bottom:10px">
+            Market shows <strong style="color:var(--green)">cautious optimism</strong>. NIFTY 50 holding support at 24,800 with bullish MACD crossover on hourly chart. FII selling pressure easing — DII absorption remains strong at ₹1,925 Cr net buy. <strong style="color:var(--text)">IT sector gaining momentum</strong> on weak rupee. Watch BANK NIFTY for breakout above 51,500.
+        </p>
+        <div class="ai-sentiment">
+            <span style="font-size:.65rem;font-weight:700;color:var(--green);min-width:55px">78% Bull</span>
+            <div class="ai-sent-bar">
+                <div class="bull" style="width:78%"></div>
+                <div class="bear" style="width:14%"></div>
+                <div class="neut" style="width:8%"></div>
+            </div>
+            <span style="font-size:.65rem;font-weight:700;color:var(--red);min-width:55px;text-align:right">14% Bear</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+            <span style="font-size:.58rem;padding:2px 7px;background:var(--green-bg);color:var(--green);border-radius:4px;font-weight:600">IT +2.5%</span>
+            <span style="font-size:.58rem;padding:2px 7px;background:var(--green-bg);color:var(--green);border-radius:4px;font-weight:600">Banking Steady</span>
+            <span style="font-size:.58rem;padding:2px 7px;background:var(--red-bg);color:var(--red);border-radius:4px;font-weight:600">Oil Pressure</span>
+            <span style="font-size:.58rem;padding:2px 7px;background:var(--accent-bg);color:var(--accent);border-radius:4px;font-weight:600">500+ signals analyzed</span>
+        </div>
+    </div>
+</div>
+
+<!-- Key Indices -->
+<div class="sh"><span class="st"><i class="bi bi-graph-up" style="color:var(--accent)"></i> Key Indices</span><a href="/indices" class="sl">All {{ total_indices }} <i class="bi bi-chevron-right"></i></a></div>
+<div class="hscroll" style="margin-bottom:16px">
+    {% for idx in indices.broad_market[:8] %}
+    <div class="idx-card">
+        <span class="idx-ex {{ 'nse' if idx.exchange=='NSE' else 'bse' }}">{{ idx.exchange }}</span>
+        <div class="idx-nm">{{ idx.name }}</div>
+        <div class="idx-val">{{ "{:,.0f}".format(idx.value) }}</div>
+        <div class="idx-chg {{ 'text-up' if idx.change>=0 else 'text-down' }}"><i class="bi {{ 'bi-caret-up-fill' if idx.change>=0 else 'bi-caret-down-fill' }}" style="font-size:.5rem"></i>{{ "+" if idx.change_pct>=0 else "" }}{{ idx.change_pct }}%</div>
+        <div class="idx-spark">{{ idx.sparkline|safe }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Sectoral Indices -->
+<div class="sh"><span class="st"><i class="bi bi-pie-chart" style="color:var(--gold)"></i> Sectoral</span><a href="/indices" class="sl">View All <i class="bi bi-chevron-right"></i></a></div>
+<div class="hscroll" style="margin-bottom:16px">
+    {% for idx in indices.sectoral %}
+    <div class="idx-card" style="width:140px">
+        <span class="idx-ex {{ 'nse' if idx.exchange=='NSE' else 'bse' }}">{{ idx.exchange }}</span>
+        <div class="idx-nm">{{ idx.name }}</div>
+        <div class="idx-val" style="font-size:.92rem">{{ "{:,.0f}".format(idx.value) }}</div>
+        <div class="idx-chg {{ 'text-up' if idx.change>=0 else 'text-down' }}"><i class="bi {{ 'bi-caret-up-fill' if idx.change>=0 else 'bi-caret-down-fill' }}" style="font-size:.45rem"></i>{{ "+" if idx.change_pct>=0 else "" }}{{ idx.change_pct }}%</div>
+        <div class="idx-spark">{{ idx.sparkline|safe }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- FII/DII (mobile) -->
+<div class="mobile-only" style="margin-bottom:16px">
+    <div class="sh"><span class="st" style="font-size:.85rem"><i class="bi bi-bank" style="color:var(--gold)"></i> FII / DII Activity</span><span style="font-size:.58rem;color:var(--text3)">29 Mar</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="fii-card" style="background:{{ 'var(--green-soft)' if fii_dii.fii_net>=0 else 'var(--red-soft)' }}">
+            <div class="fii-lbl" style="color:var(--text2)">FII Net</div>
+            <div class="fii-val {{ 'text-up' if fii_dii.fii_net>=0 else 'text-down' }}">₹{{ "{:,.0f}".format(fii_dii.fii_net) }}Cr</div>
+            <div class="fii-sub">Buy: ₹{{ "{:,.0f}".format(fii_dii.fii_buy) }}Cr</div>
+        </div>
+        <div class="fii-card" style="background:{{ 'var(--green-soft)' if fii_dii.dii_net>=0 else 'var(--red-soft)' }}">
+            <div class="fii-lbl" style="color:var(--text2)">DII Net</div>
+            <div class="fii-val {{ 'text-up' if fii_dii.dii_net>=0 else 'text-down' }}">₹{{ "{:,.0f}".format(fii_dii.dii_net) }}Cr</div>
+            <div class="fii-sub">Buy: ₹{{ "{:,.0f}".format(fii_dii.dii_buy) }}Cr</div>
+        </div>
+    </div>
+</div>
+
+<!-- Advance/Decline (mobile) -->
+<div class="mobile-only" style="margin-bottom:16px">
+    <div class="widget">
+        <div class="widget-hdr"><span class="widget-title" style="font-size:.78rem"><i class="bi bi-bar-chart-steps" style="color:var(--green)"></i> Advance / Decline</span><span style="font-size:.58rem;color:var(--text3)">{{ breadth.total }} stocks</span></div>
+        <div class="widget-body" style="padding:10px 14px">
+            <div class="breadth-bar" style="margin-bottom:8px">
+                <div class="adv" style="width:{{ breadth.adv_pct }}%"></div>
+                <div class="dec" style="width:{{ breadth.dec_pct }}%"></div>
+                <div class="unch" style="width:{{ breadth.unch_pct }}%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.68rem">
+                <div><span style="color:var(--green);font-weight:700">{{ breadth.advances }}</span> <span style="color:var(--text3)">Adv</span></div>
+                <div><span style="color:var(--red);font-weight:700">{{ breadth.declines }}</span> <span style="color:var(--text3)">Dec</span></div>
+                <div><span style="color:var(--text3);font-weight:700">{{ breadth.unchanged }}</span> <span style="color:var(--text3)">Unch</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Market Movers -->
+<div class="sh"><span class="st"><i class="bi bi-lightning-charge" style="color:var(--gold)"></i> Market Movers</span></div>
+<div class="tabs" style="margin-bottom:6px">
+    <button class="tab active" onclick="showTab('gainers',this)"><i class="bi bi-arrow-up-right" style="color:var(--green)"></i> Gainers</button>
+    <button class="tab" onclick="showTab('losers',this)"><i class="bi bi-arrow-down-right" style="color:var(--red)"></i> Losers</button>
+    <button class="tab" onclick="showTab('active',this)"><i class="bi bi-activity"></i> Active</button>
+    <button class="tab" onclick="showTab('w52h',this)"><i class="bi bi-arrow-up" style="color:var(--green)"></i> 52W High</button>
+    <button class="tab" onclick="showTab('w52l',this)"><i class="bi bi-arrow-down" style="color:var(--red)"></i> 52W Low</button>
+</div>
+<div class="card" style="margin-bottom:16px">
+    <div id="tab-gainers">
+        {% for s in top_gainers %}
+        <a href="/stock/{{ s.symbol }}" class="srow">
+            <div class="srow-left">
+                <div class="srow-sym">{{ s.symbol }} <span class="exb {{ 'nse' if s.exchange=='NSE' else 'bse' }}">{{ s.exchange }}</span></div>
+                <div class="srow-name">{{ s.name }}</div>
+            </div>
+            <div class="srow-right">
+                <div class="srow-price">₹{{ "{:,.2f}".format(s.price) }}</div>
+                <div class="srow-chg"><span class="pill up"><i class="bi bi-caret-up-fill" style="font-size:.45rem"></i> +{{ s.change_pct }}%</span></div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    <div id="tab-losers" style="display:none">
+        {% for s in top_losers %}
+        <a href="/stock/{{ s.symbol }}" class="srow">
+            <div class="srow-left">
+                <div class="srow-sym">{{ s.symbol }} <span class="exb {{ 'nse' if s.exchange=='NSE' else 'bse' }}">{{ s.exchange }}</span></div>
+                <div class="srow-name">{{ s.name }}</div>
+            </div>
+            <div class="srow-right">
+                <div class="srow-price">₹{{ "{:,.2f}".format(s.price) }}</div>
+                <div class="srow-chg"><span class="pill down"><i class="bi bi-caret-down-fill" style="font-size:.45rem"></i> {{ s.change_pct }}%</span></div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    <div id="tab-active" style="display:none">
+        {% for s in most_active %}
+        <a href="/stock/{{ s.symbol }}" class="srow">
+            <div class="srow-left">
+                <div class="srow-sym">{{ s.symbol }} <span class="exb {{ 'nse' if s.exchange=='NSE' else 'bse' }}">{{ s.exchange }}</span></div>
+                <div class="srow-name">{{ s.name }}</div>
+            </div>
+            <div class="srow-right">
+                <div class="srow-price">₹{{ "{:,.2f}".format(s.price) }}</div>
+                <div class="srow-chg"><span class="pill {{ 'up' if s.change>=0 else 'down' }}">{{ s.volume_fmt }}</span></div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    <div id="tab-w52h" style="display:none">
+        {% for s in w52_high %}
+        <a href="/stock/{{ s.symbol }}" class="srow">
+            <div class="srow-left">
+                <div class="srow-sym">{{ s.symbol }}</div>
+                <div class="srow-name">{{ s.name }}</div>
+            </div>
+            <div class="srow-right">
+                <div class="srow-price">₹{{ "{:,.2f}".format(s.price) }}</div>
+                <div style="margin-top:2px"><div class="range-bar" style="width:80px" data-tip="₹{{ s.low_52w }} – ₹{{ s.high_52w }}"><div class="range-fill" style="width:100%"></div><div class="range-dot" style="left:{{ s.pos_in_52w }}%"></div></div></div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    <div id="tab-w52l" style="display:none">
+        {% for s in w52_low %}
+        <a href="/stock/{{ s.symbol }}" class="srow">
+            <div class="srow-left">
+                <div class="srow-sym">{{ s.symbol }}</div>
+                <div class="srow-name">{{ s.name }}</div>
+            </div>
+            <div class="srow-right">
+                <div class="srow-price">₹{{ "{:,.2f}".format(s.price) }}</div>
+                <div style="margin-top:2px"><div class="range-bar" style="width:80px" data-tip="₹{{ s.low_52w }} – ₹{{ s.high_52w }}"><div class="range-fill" style="width:100%"></div><div class="range-dot" style="left:{{ s.pos_in_52w }}%"></div></div></div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Sectors -->
+<div class="sh"><span class="st"><i class="bi bi-grid" style="color:var(--purple)"></i> Browse by Sector</span><a href="/sectors" class="sl">All {{ sectors|length }} <i class="bi bi-chevron-right"></i></a></div>
+<div class="g2 g2-sectors" style="margin-bottom:18px">
+    {% for sector in sectors %}
+    <a href="/sector/{{ sector.slug }}"><div class="sec-card">
+        <div class="sec-icon" style="background:{{ sector.color }}15;color:{{ sector.color }}"><i class="bi {{ sector.icon }}"></i></div>
+        <div class="sec-info">
+            <div style="display:flex;justify-content:space-between;align-items:center"><div class="sec-nm">{{ sector.name }}</div><span class="pill {{ 'up' if sector.avg_change>=0 else 'down' }}">{{ "+" if sector.avg_change>=0 else "" }}{{ sector.avg_change }}%</span></div>
+            <div class="sec-meta">{{ sector.stock_count }} stocks</div>
+            <div class="chip-row">{% for s in sector.top_stocks[:3] %}<span class="chip"><span class="chip-sym">{{ s.symbol }}</span><span class="{{ 'text-up' if s.change_pct>=0 else 'text-down' }}">{{ "+" if s.change_pct>=0 else "" }}{{ s.change_pct }}%</span></span>{% endfor %}</div>
+        </div>
+    </div></a>
+    {% endfor %}
+</div>
+
+</div>
+
+<!-- ═══ RIGHT SIDEBAR (desktop) ═══ -->
+<div class="content-grid-side desktop-only">
+
+<!-- Market Summary -->
+<div class="widget" style="margin-bottom:14px">
+    <div class="widget-hdr"><span class="widget-title"><i class="bi bi-speedometer2" style="color:var(--accent)"></i> Market Summary</span></div>
+    <div class="widget-body">
+        <div class="g2" style="gap:8px;margin-bottom:12px">
+            <div class="stat-card"><div class="stat-val text-up">{{ total_stocks }}</div><div class="stat-lbl">Stocks</div></div>
+            <div class="stat-card"><div class="stat-val" style="color:var(--accent)">{{ sectors|length }}</div><div class="stat-lbl">Sectors</div></div>
+            <div class="stat-card"><div class="stat-val" style="color:var(--gold)">{{ total_indices }}</div><div class="stat-lbl">Indices</div></div>
+            <div class="stat-card"><div class="stat-val" style="color:var(--purple)">2</div><div class="stat-lbl">Exchanges</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- Market Breadth -->
+<div class="widget" style="margin-bottom:14px">
+    <div class="widget-hdr"><span class="widget-title"><i class="bi bi-bar-chart-steps" style="color:var(--green)"></i> Advance / Decline</span><span style="font-size:.58rem;color:var(--text3)" data-tip="Ratio of advancing to declining stocks">{{ breadth.total }} stocks</span></div>
+    <div class="widget-body">
+        <div class="breadth-bar" style="margin-bottom:10px">
+            <div class="adv" style="width:{{ breadth.adv_pct }}%"></div>
+            <div class="dec" style="width:{{ breadth.dec_pct }}%"></div>
+            <div class="unch" style="width:{{ breadth.unch_pct }}%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.7rem">
+            <div data-tip="Stocks that went up"><span style="color:var(--green);font-weight:700">{{ breadth.advances }}</span> <span style="color:var(--text3)">Adv</span></div>
+            <div data-tip="Stocks that went down"><span style="color:var(--red);font-weight:700">{{ breadth.declines }}</span> <span style="color:var(--text3)">Dec</span></div>
+            <div data-tip="No change"><span style="color:var(--text3);font-weight:700">{{ breadth.unchanged }}</span> <span style="color:var(--text3)">Unch</span></div>
+        </div>
+        <div style="text-align:center;margin-top:8px;font-size:.68rem;color:var(--text2)">A/D Ratio: <strong data-tip="Above 1 = bullish" style="color:var(--text)">{{ "%.2f"|format(breadth.advances / breadth.declines) }}</strong></div>
+    </div>
+</div>
+
+<!-- FII / DII -->
+<div class="widget" style="margin-bottom:14px">
+    <div class="widget-hdr"><span class="widget-title" data-tip="Foreign & Domestic Institutional Investors"><i class="bi bi-bank" style="color:var(--gold)"></i> FII / DII Activity</span><span style="font-size:.58rem;color:var(--text3)">29 Mar 2026</span></div>
+    <div class="widget-body">
+        <div class="g2" style="gap:8px;margin-bottom:10px">
+            <div class="fii-card" style="background:{{ 'var(--green-soft)' if fii_dii.fii_net>=0 else 'var(--red-soft)' }}">
+                <div class="fii-lbl" style="color:var(--text2)">FII Net</div>
+                <div class="fii-val {{ 'text-up' if fii_dii.fii_net>=0 else 'text-down' }}">₹{{ "{:,.0f}".format(fii_dii.fii_net) }} Cr</div>
+                <div class="fii-sub">Buy: ₹{{ "{:,.0f}".format(fii_dii.fii_buy) }} Cr</div>
+            </div>
+            <div class="fii-card" style="background:{{ 'var(--green-soft)' if fii_dii.dii_net>=0 else 'var(--red-soft)' }}">
+                <div class="fii-lbl" style="color:var(--text2)">DII Net</div>
+                <div class="fii-val {{ 'text-up' if fii_dii.dii_net>=0 else 'text-down' }}">₹{{ "{:,.0f}".format(fii_dii.dii_net) }} Cr</div>
+                <div class="fii-sub">Buy: ₹{{ "{:,.0f}".format(fii_dii.dii_buy) }} Cr</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Smart Alerts -->
+<div class="ai-pulse-card ai-glow" style="margin-bottom:14px">
+    <div class="ai-pulse-hdr">
+        <div style="display:flex;align-items:center;gap:6px"><span class="ai-badge"><i class="bi bi-stars"></i> AI</span><span style="font-size:.78rem;font-weight:700">Smart Alerts</span></div>
+        <span style="font-size:.55rem;color:var(--text3)">Live</span>
+    </div>
+    <div style="padding:0">
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;border-bottom:1px solid rgba(139,92,246,.1);font-size:.7rem">
+            <i class="bi bi-exclamation-triangle-fill" style="color:var(--gold);margin-top:2px;flex-shrink:0"></i>
+            <div><strong>TATAMOTORS</strong> — Unusual volume spike (+340% above avg). AI detects potential breakout pattern.</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;border-bottom:1px solid rgba(139,92,246,.1);font-size:.7rem">
+            <i class="bi bi-graph-up-arrow" style="color:var(--green);margin-top:2px;flex-shrink:0"></i>
+            <div><strong>HDFCBANK</strong> approaching key resistance at ₹2,450. Bullish flag pattern on daily chart.</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;border-bottom:1px solid rgba(139,92,246,.1);font-size:.7rem">
+            <i class="bi bi-newspaper" style="color:var(--accent);margin-top:2px;flex-shrink:0"></i>
+            <div>Sentiment shift: <strong>IT sector</strong> turned bullish (65% positive) driven by rupee weakness news.</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;font-size:.7rem">
+            <i class="bi bi-shield-check" style="color:var(--purple);margin-top:2px;flex-shrink:0"></i>
+            <div><strong>RELIANCE</strong> — AI detected support holding at ₹2,780. Low risk entry zone.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Thematic Indices -->
+<div class="widget" style="margin-bottom:14px">
+    <div class="widget-hdr"><span class="widget-title"><i class="bi bi-lightbulb" style="color:var(--purple)"></i> Thematic</span></div>
+    <div>
+        {% for idx in indices.thematic[:8] %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);font-size:.72rem">
+            <div><span class="exb {{ 'nse' if idx.exchange=='NSE' else 'bse' }}" style="margin-right:4px">{{ idx.exchange }}</span><span style="font-weight:600">{{ idx.name }}</span></div>
+            <div style="text-align:right"><span style="font-weight:700">{{ "{:,.0f}".format(idx.value) }}</span> <span class="pill {{ 'up' if idx.change>=0 else 'down' }}" style="font-size:.58rem">{{ "+" if idx.change_pct>=0 else "" }}{{ idx.change_pct }}%</span></div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+</div><!-- /desktop sidebar -->
+
+</div><!-- /content-grid -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showTab(name,btn){
+    document.querySelectorAll('[id^="tab-"]').forEach(el=>el.style.display='none');
+    document.getElementById('tab-'+name).style.display='';
+    document.querySelectorAll('.tabs .tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+}
+</script>
+{% endblock %}

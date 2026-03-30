@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Market News — StockPulse{% endblock %}
+{% block content %}
+<div class="bc"><a href="/">Home</a><span class="sep">/</span><span>News</span></div>
+<div class="sh"><span class="st"><i class="bi bi-newspaper" style="color:var(--accent)"></i> Market News</span></div>
+
+<!-- Category Filter -->
+<div class="tabs" style="margin-bottom:12px">
+    <button class="tab active" onclick="filterNews('all',this)">All</button>
+    <button class="tab" onclick="filterNews('Market',this)">Market</button>
+    <button class="tab" onclick="filterNews('Sector',this)">Sector</button>
+    <button class="tab" onclick="filterNews('Stock',this)">Stock</button>
+    <button class="tab" onclick="filterNews('Global',this)">Global</button>
+    <button class="tab" onclick="filterNews('IPO',this)">IPO</button>
+    <button class="tab" onclick="filterNews('Policy',this)">Policy</button>
+</div>
+
+<!-- Breaking News Banner -->
+{% for article in news if article.is_breaking %}
+<div class="card news-item" data-cat="{{ article.category }}" style="margin-bottom:12px;border-color:var(--red);border-width:1px">
+    <div class="card-body" style="padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span class="news-breaking">BREAKING</span>
+            <span class="news-cat" style="background:var(--red-bg);color:var(--red)">{{ article.category }}</span>
+        </div>
+        <div class="news-title" style="font-size:.88rem">{{ article.title }}</div>
+        <div class="news-summary">{{ article.summary }}</div>
+        <div class="news-meta">
+            <span><i class="bi bi-clock"></i> {{ article.timestamp }}</span>
+            <span>{{ article.source }}</span>
+            {% for sym in article.related_symbols %}
+            <a href="/stock/{{ sym }}" style="color:var(--accent);font-weight:600">{{ sym }}</a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- All News -->
+<div style="display:grid;gap:10px">
+    {% for article in news if not article.is_breaking %}
+    <div class="news-card news-item" data-cat="{{ article.category }}">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+            <span class="news-cat" style="background:{% if article.category=='Market' %}var(--accent-bg);color:var(--accent){% elif article.category=='Sector' %}rgba(249,115,22,.1);color:#f97316{% elif article.category=='Stock' %}var(--green-bg);color:var(--green){% elif article.category=='Global' %}rgba(167,139,250,.1);color:var(--purple){% elif article.category=='IPO' %}rgba(245,158,11,.1);color:var(--gold){% else %}rgba(100,116,139,.15);color:var(--text2){% endif %}">{{ article.category }}</span>
+            <span style="font-size:.6rem;color:var(--text3)">{{ article.timestamp }}</span>
+        </div>
+        <div class="news-title">{{ article.title }}</div>
+        <div class="news-summary">{{ article.summary }}</div>
+        <div class="news-meta">
+            <span><i class="bi bi-journal-text"></i> {{ article.source }}</span>
+            {% for sym in article.related_symbols %}
+            <a href="/stock/{{ sym }}" style="color:var(--accent);font-weight:600">{{ sym }}</a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterNews(cat,btn){
+    document.querySelectorAll('.tabs .tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.news-item').forEach(el=>{
+        el.style.display=(cat==='all'||el.dataset.cat===cat)?'':'none';
+    });
+}
+</script>
+{% endblock %}

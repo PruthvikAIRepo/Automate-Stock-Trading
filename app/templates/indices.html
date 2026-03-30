@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Market Indices — StockPulse{% endblock %}
+{% block content %}
+<div class="bc"><a href="/">Home</a><span class="sep">/</span><span>Indices</span></div>
+<div class="sh"><span class="st"><i class="bi bi-bar-chart" style="color:var(--accent)"></i> Market Indices ({{ total }})</span></div>
+<div class="tabs" style="margin-bottom:14px">
+    <button class="tab active" onclick="filterIdx('all',this)">All ({{ total }})</button>
+    <button class="tab" onclick="filterIdx('nse',this)">NSE</button>
+    <button class="tab" onclick="filterIdx('bse',this)">BSE</button>
+</div>
+
+{% macro idx_section(title, icon, color, items) %}
+<div class="sh" style="margin-top:12px"><span class="st" style="font-size:.9rem"><i class="bi {{ icon }}" style="color:{{ color }}"></i> {{ title }}</span><span style="font-size:.65rem;color:var(--text3)">{{ items|length }}</span></div>
+<div class="g3" style="margin-bottom:18px">
+    {% for idx in items %}
+    <div class="idx-card idx-item" data-exchange="{{ idx.exchange|lower }}" style="width:auto">
+        <span class="idx-ex {{ 'nse' if idx.exchange=='NSE' else 'bse' }}">{{ idx.exchange }}</span>
+        <div class="idx-nm">{{ idx.name }}</div>
+        <div class="idx-val" style="font-size:1rem">{{ "{:,.0f}".format(idx.value) }}</div>
+        <div class="idx-chg {{ 'text-up' if idx.change>=0 else 'text-down' }}"><i class="bi {{ 'bi-caret-up-fill' if idx.change>=0 else 'bi-caret-down-fill' }}" style="font-size:.5rem"></i> {{ "+" if idx.change>=0 else "" }}{{ "{:,.0f}".format(idx.change) }} ({{ "+" if idx.change_pct>=0 else "" }}{{ idx.change_pct }}%)</div>
+        <div class="idx-spark">{{ idx.sparkline|safe }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
+{{ idx_section("Broad Market", "bi-graph-up", "var(--accent)", indices.broad_market) }}
+{{ idx_section("Sectoral", "bi-pie-chart", "var(--gold)", indices.sectoral) }}
+{{ idx_section("Thematic & Strategy", "bi-lightbulb", "var(--purple)", indices.thematic) }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterIdx(f,btn){
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+    document.querySelectorAll('.idx-item').forEach(c=>{c.style.display=(f==='all'||c.dataset.exchange===f)?'':'none'});
+}
+</script>
+{% endblock %}

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}{{ stock.symbol }} — StockPulse{% endblock %}
+
+{% block content %}
+<div class="bc"><a href="/">Home</a><span class="sep">/</span><a href="/stocks">Stocks</a><span class="sep">/</span><span>{{ stock.symbol }}</span></div>
+
+<div class="content-grid">
+<div class="content-grid-main">
+
+<!-- Price Header -->
+<div class="card" style="margin-bottom:16px">
+    <div class="card-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:1.1rem;font-weight:800">{{ stock.symbol }}</span>
+            <span class="exb {{ 'nse' if stock.exchange=='NSE' else 'bse' }}">{{ stock.exchange }}</span>
+            <span style="font-size:.7rem;color:var(--text3)">{{ stock.series }}</span>
+        </div>
+        <div style="font-size:.78rem;color:var(--text2);margin-bottom:10px">{{ stock.name }}</div>
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <span class="sd-price">₹{{ "{:,.2f}".format(stock.price) }}</span>
+            <span class="sd-change {{ 'text-up' if stock.change>=0 else 'text-down' }}">
+                <i class="bi {{ 'bi-caret-up-fill' if stock.change>=0 else 'bi-caret-down-fill' }}"></i>
+                {{ "+" if stock.change>=0 else "" }}{{ "{:,.2f}".format(stock.change) }} ({{ "+" if stock.change_pct>=0 else "" }}{{ stock.change_pct }}%)
+            </span>
+        </div>
+        <div class="sd-meta" style="margin-top:4px">As on 29 Mar 2026, 10:15 IST</div>
+    </div>
+</div>
+
+<!-- Chart Placeholder -->
+<div class="card" style="margin-bottom:16px">
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border)">
+        <div class="tabs" style="padding:0;margin:0">
+            <button class="tab active" style="padding:5px 12px">1D</button>
+            <button class="tab" style="padding:5px 12px">1W</button>
+            <button class="tab" style="padding:5px 12px">1M</button>
+            <button class="tab" style="padding:5px 12px">3M</button>
+            <button class="tab" style="padding:5px 12px">6M</button>
+            <button class="tab" style="padding:5px 12px">1Y</button>
+            <button class="tab" style="padding:5px 12px">5Y</button>
+            <button class="tab" style="padding:5px 12px">Max</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="chart-placeholder">
+            <div style="text-align:center">
+                <i class="bi bi-graph-up" style="font-size:2.5rem;display:block;margin-bottom:8px;opacity:.3"></i>
+                <div>Interactive chart will be here</div>
+                <div style="font-size:.68rem;color:var(--text3);margin-top:4px">Powered by Lightweight Charts</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs: Overview / Technicals / Fundamentals -->
+<div class="tabs" style="margin-bottom:12px">
+    <button class="tab active" onclick="showPanel('overview',this)">Overview</button>
+    <button class="tab" onclick="showPanel('technicals',this)">Technicals</button>
+    <button class="tab" onclick="showPanel('fundamentals',this)">Fundamentals</button>
+</div>
+
+<!-- Overview -->
+<div id="panel-overview" class="card" style="margin-bottom:16px">
+    <div class="card-body">
+        <div class="sd-grid">
+            <div class="sd-cell"><div class="sd-cell-val">₹{{ "{:,.2f}".format(stock.open) }}</div><div class="sd-cell-lbl">Open</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">₹{{ "{:,.2f}".format(stock.prev_close) }}</div><div class="sd-cell-lbl">Prev Close</div></div>
+            <div class="sd-cell"><div class="sd-cell-val text-up">₹{{ "{:,.2f}".format(stock.high) }}</div><div class="sd-cell-lbl">Day High</div></div>
+            <div class="sd-cell"><div class="sd-cell-val text-down">₹{{ "{:,.2f}".format(stock.low) }}</div><div class="sd-cell-lbl">Day Low</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">{{ stock.volume_fmt }}</div><div class="sd-cell-lbl">Volume</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">{{ stock.market_cap_fmt }}</div><div class="sd-cell-lbl">Market Cap</div></div>
+        </div>
+
+        <!-- 52 Week Range -->
+        <div style="margin-top:16px;padding:0 4px">
+            <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--text3);margin-bottom:4px">
+                <span>52W Low: ₹{{ "{:,.2f}".format(stock.low_52w) }}</span>
+                <span>52W High: ₹{{ "{:,.2f}".format(stock.high_52w) }}</span>
+            </div>
+            <div class="range-bar" style="height:6px">
+                <div class="range-fill" style="width:100%;height:100%"></div>
+                <div class="range-dot" style="left:{{ stock.pos_in_52w }}%;width:10px;height:10px;top:-2px" data-tip="Current: ₹{{ '{:,.2f}'.format(stock.price) }}"></div>
+            </div>
+            <div style="text-align:center;font-size:.62rem;color:var(--text3);margin-top:4px">{{ stock.pct_from_52w_low }}% above 52W low</div>
+        </div>
+    </div>
+</div>
+
+<!-- Technicals -->
+<div id="panel-technicals" class="card" style="margin-bottom:16px;display:none">
+    <div class="card-body">
+        <div class="sd-grid">
+            <div class="sd-cell"><div class="sd-cell-val" style="color:var(--green)">Buy</div><div class="sd-cell-lbl">RSI Signal</div></div>
+            <div class="sd-cell"><div class="sd-cell-val" style="color:var(--gold)">Neutral</div><div class="sd-cell-lbl">MACD Signal</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">56.3</div><div class="sd-cell-lbl">RSI (14)</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">₹{{ "{:,.0f}".format(stock.price * 0.97) }}</div><div class="sd-cell-lbl">Support</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">₹{{ "{:,.0f}".format(stock.price * 1.03) }}</div><div class="sd-cell-lbl">Resistance</div></div>
+            <div class="sd-cell"><div class="sd-cell-val" style="color:var(--green)">Strong Buy</div><div class="sd-cell-lbl">Moving Avg</div></div>
+        </div>
+        <div style="text-align:center;margin-top:12px;font-size:.62rem;color:var(--text3)">Technical analysis is indicative and not a recommendation</div>
+    </div>
+</div>
+
+<!-- Fundamentals -->
+<div id="panel-fundamentals" class="card" style="margin-bottom:16px;display:none">
+    <div class="card-body">
+        <div class="sd-grid">
+            <div class="sd-cell"><div class="sd-cell-val">{{ stock.pe_ratio }}</div><div class="sd-cell-lbl" data-tip="Price to Earnings ratio">P/E Ratio</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">{{ stock.pb_ratio }}</div><div class="sd-cell-lbl" data-tip="Price to Book value ratio">P/B Ratio</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">{{ stock.div_yield }}%</div><div class="sd-cell-lbl" data-tip="Annual dividend as % of price">Div Yield</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">{{ stock.market_cap_fmt }}</div><div class="sd-cell-lbl">Market Cap</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">{{ "%.1f"|format(stock.pe_ratio * 1.2) }}</div><div class="sd-cell-lbl" data-tip="Industry average P/E">Industry PE</div></div>
+            <div class="sd-cell"><div class="sd-cell-val">{{ stock.volume_fmt }}</div><div class="sd-cell-lbl">Avg Volume</div></div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- AI Stock Score -->
+<div class="ai-pulse-card ai-glow" style="margin-bottom:16px">
+    <div class="ai-pulse-hdr">
+        <div style="display:flex;align-items:center;gap:6px"><span class="ai-badge"><i class="bi bi-stars"></i> AI</span><span style="font-size:.78rem;font-weight:700">Stock Score</span></div>
+        <span style="font-size:.55rem;color:var(--text3)">150+ data points</span>
+    </div>
+    <div class="ai-pulse-body">
+        {% set ai_tech = ((stock.pos_in_52w * 0.4)|round|int) %}
+        {% set ai_fund = ((30 - stock.pe_ratio * 0.3)|round|int) %}
+        {% set ai_fund = [ai_fund, 5]|max %}
+        {% set ai_fund = [ai_fund, 30]|min %}
+        {% set ai_sent = (22 + (stock.change_pct * 3))|round|int %}
+        {% set ai_sent = [ai_sent, 5]|max %}
+        {% set ai_sent = [ai_sent, 30]|min %}
+        {% set ai_total = ai_tech + ai_fund + ai_sent %}
+        {% set ai_total = [ai_total, 100]|min %}
+        {% set score_color = 'var(--green)' if ai_total >= 70 else ('var(--gold)' if ai_total >= 45 else 'var(--red)') %}
+        {% set score_label = 'Strong Buy' if ai_total >= 75 else ('Buy' if ai_total >= 60 else ('Hold' if ai_total >= 45 else ('Sell' if ai_total >= 30 else 'Strong Sell'))) %}
+        <div style="text-align:center;margin-bottom:6px">
+            <div class="ai-score-ring">
+                <svg width="90" height="90"><circle cx="45" cy="45" r="38" fill="none" stroke="var(--bg-elevated)" stroke-width="6"/><circle cx="45" cy="45" r="38" fill="none" stroke="{{ score_color }}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ (ai_total / 100 * 238.76)|round }} 238.76"/></svg>
+                <div style="display:flex;flex-direction:column;align-items:center"><span class="ai-score-val" style="color:{{ score_color }}">{{ ai_total }}</span><span class="ai-score-lbl">/ 100</span></div>
+            </div>
+            <div style="font-size:.75rem;font-weight:700;color:{{ score_color }};margin-top:4px">{{ score_label }}</div>
+        </div>
+        <div class="ai-score-breakdown">
+            <div class="ai-score-item"><div class="ai-score-item-val" style="color:var(--accent)">{{ ai_tech }}<span style="font-size:.55rem;color:var(--text3)">/40</span></div><div class="ai-score-item-lbl">Technical</div></div>
+            <div class="ai-score-item"><div class="ai-score-item-val" style="color:var(--gold)">{{ ai_fund }}<span style="font-size:.55rem;color:var(--text3)">/30</span></div><div class="ai-score-item-lbl">Fundamental</div></div>
+            <div class="ai-score-item"><div class="ai-score-item-val" style="color:var(--purple)">{{ ai_sent }}<span style="font-size:.55rem;color:var(--text3)">/30</span></div><div class="ai-score-item-lbl">Sentiment</div></div>
+        </div>
+        <div style="margin-top:8px;font-size:.62rem;color:var(--text3);text-align:center">AI analysis based on technical indicators, fundamentals & news sentiment</div>
+    </div>
+</div>
+
+<!-- RIGHT PANEL (desktop) -->
+<div class="content-grid-side desktop-only">
+    <div class="widget" style="margin-bottom:14px">
+        <div class="widget-hdr"><span class="widget-title"><i class="bi bi-info-circle" style="color:var(--accent)"></i> Quick Info</span></div>
+        <div class="widget-body" style="font-size:.75rem">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">Exchange</span><span style="font-weight:600">{{ stock.exchange }}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">Series</span><span style="font-weight:600">{{ stock.series }}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">Day Range</span><span style="font-weight:600">₹{{ "{:,.0f}".format(stock.low) }} – ₹{{ "{:,.0f}".format(stock.high) }}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">52W Range</span><span style="font-weight:600">₹{{ "{:,.0f}".format(stock.low_52w) }} – ₹{{ "{:,.0f}".format(stock.high_52w) }}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text3)">P/E Ratio</span><span style="font-weight:600">{{ stock.pe_ratio }}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:var(--text3)">Div Yield</span><span style="font-weight:600">{{ stock.div_yield }}%</span></div>
+        </div>
+    </div>
+</div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showPanel(name,btn){
+    document.querySelectorAll('[id^="panel-"]').forEach(el=>el.style.display='none');
+    document.getElementById('panel-'+name).style.display='';
+    btn.parentElement.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+}
+</script>
+{% endblock %}

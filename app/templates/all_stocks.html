@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}All Stocks — StockPulse{% endblock %}
+{% block content %}
+<div class="bc"><a href="/">Home</a><span class="sep">/</span><span>All Stocks</span></div>
+<div class="sh"><span class="st"><i class="bi bi-list-ul" style="color:var(--accent)"></i> All Stocks ({{ stocks|length }})</span></div>
+
+<input type="text" class="search" id="stockSearch" placeholder="Search by symbol or company..." oninput="filterStocks()" style="margin-bottom:10px">
+<div class="tabs" style="margin-bottom:12px">
+    <a href="/stocks?sort=symbol&order={{ order }}" class="tab {{ 'active' if sort_by=='symbol' else '' }}">Symbol</a>
+    <a href="/stocks?sort=price&order={{ order }}" class="tab {{ 'active' if sort_by=='price' else '' }}">Price</a>
+    <a href="/stocks?sort=change_pct&order={{ order }}" class="tab {{ 'active' if sort_by=='change_pct' else '' }}">Change %</a>
+    <a href="/stocks?sort=volume&order={{ order }}" class="tab {{ 'active' if sort_by=='volume' else '' }}">Volume</a>
+    <a href="/stocks?sort=market_cap_cr&order={{ order }}" class="tab {{ 'active' if sort_by=='market_cap_cr' else '' }}">Mkt Cap</a>
+</div>
+
+<!-- Desktop Table -->
+<div class="card desktop-only">
+    <table class="dtable">
+        <thead><tr><th>Symbol</th><th>Company</th><th>Exchange</th><th class="r">Price</th><th class="r">Change</th><th class="r">Change %</th><th class="r">Volume</th><th class="r">Mkt Cap</th><th class="r">52W Range</th></tr></thead>
+        <tbody>
+        {% for s in stocks %}
+        <tr class="stock-item" data-symbol="{{ s.symbol|lower }}" data-name="{{ s.name|lower }}" onclick="location.href='/stock/{{ s.symbol }}'" style="cursor:pointer">
+            <td><span style="font-weight:700;color:var(--accent)">{{ s.symbol }}</span></td>
+            <td style="color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.name }}</td>
+            <td><span class="exb {{ 'nse' if s.exchange=='NSE' else 'bse' }}">{{ s.exchange }}</span></td>
+            <td class="r" style="font-weight:700">₹{{ "{:,.2f}".format(s.price) }}</td>
+            <td class="r {{ 'text-up' if s.change>=0 else 'text-down' }}">{{ "+" if s.change>=0 else "" }}{{ "{:,.2f}".format(s.change) }}</td>
+            <td class="r"><span class="pill {{ 'up' if s.change_pct>=0 else 'down' }}">{{ "+" if s.change_pct>=0 else "" }}{{ s.change_pct }}%</span></td>
+            <td class="r" style="color:var(--text3)">{{ s.volume_fmt }}</td>
+            <td class="r" style="color:var(--text3)">{{ s.market_cap_fmt }}</td>
+            <td class="r"><div class="range-bar" style="width:70px;display:inline-block" data-tip="₹{{ s.low_52w }} – ₹{{ s.high_52w }}"><div class="range-fill" style="width:100%"></div><div class="range-dot" style="left:{{ s.pos_in_52w }}%"></div></div></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Mobile List -->
+<div class="card mobile-only">
+    {% for s in stocks %}
+    <a href="/stock/{{ s.symbol }}" class="srow stock-item-m" data-symbol="{{ s.symbol|lower }}" data-name="{{ s.name|lower }}">
+        <div class="srow-left">
+            <div class="srow-sym">{{ s.symbol }} <span class="exb {{ 'nse' if s.exchange=='NSE' else 'bse' }}">{{ s.exchange }}</span></div>
+            <div class="srow-name">{{ s.name }}</div>
+        </div>
+        <div class="srow-right">
+            <div class="srow-price">₹{{ "{:,.2f}".format(s.price) }}</div>
+            <div class="srow-chg"><span class="pill {{ 'up' if s.change>=0 else 'down' }}"><i class="bi {{ 'bi-caret-up-fill' if s.change>=0 else 'bi-caret-down-fill' }}" style="font-size:.5rem"></i> {{ "+" if s.change_pct>=0 else "" }}{{ s.change_pct }}%</span></div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterStocks(){
+    const q=document.getElementById('stockSearch').value.toLowerCase();
+    document.querySelectorAll('.stock-item,.stock-item-m').forEach(r=>{r.style.display=(r.dataset.symbol.includes(q)||r.dataset.name.includes(q))?'':'none'});
+}
+</script>
+{% endblock %}

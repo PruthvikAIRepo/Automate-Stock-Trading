@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ sector.name }} — StockPulse{% endblock %}
+{% block content %}
+<div class="bc"><a href="/">Home</a><span class="sep">/</span><a href="/sectors">Sectors</a><span class="sep">/</span><span>{{ sector.name }}</span></div>
+
+<div class="detail-hdr" style="display:flex;align-items:center;gap:14px">
+    <div class="sec-icon" style="background:{{ sector.color }}15;color:{{ sector.color }};width:50px;height:50px;font-size:1.3rem"><i class="bi {{ sector.icon }}"></i></div>
+    <div><h1>{{ sector.name }}</h1><p>{{ sector.description }}</p></div>
+</div>
+
+<input type="text" class="search" id="stockSearch" placeholder="Search stocks in {{ sector.name }}..." oninput="filterStocks()" style="margin-bottom:14px">
+
+{% for sec_name, sec_data in sector.sectors.items() %}
+<div class="sh" style="margin-top:12px"><span class="st" style="color:{{ sector.color }}"><i class="bi bi-folder2-open" style="font-size:.85rem"></i> {{ sec_name }}</span></div>
+
+{% for industry_name, stocks in sec_data.industries.items() %}
+<div class="ind-grp">
+    <div class="ind-hdr"><span class="ind-nm">{{ industry_name }}</span><span class="ind-cnt">{{ stocks|length }}</span></div>
+    {% for stock in stocks %}
+    <a href="/stock/{{ stock.symbol }}" class="srow stock-item" data-symbol="{{ stock.symbol|lower }}" data-name="{{ stock.name|lower }}">
+        <div class="srow-left">
+            <div class="srow-sym">{{ stock.symbol }} <span class="exb {{ 'nse' if stock.exchange=='NSE' else 'bse' }}">{{ stock.exchange }}</span></div>
+            <div class="srow-name">{{ stock.name }}</div>
+        </div>
+        <div class="srow-right">
+            <div class="srow-price">₹{{ "{:,.2f}".format(stock.price) }}</div>
+            <div class="srow-chg"><span class="pill {{ 'up' if stock.change>=0 else 'down' }}"><i class="bi {{ 'bi-caret-up-fill' if stock.change>=0 else 'bi-caret-down-fill' }}" style="font-size:.5rem"></i> {{ "+" if stock.change_pct>=0 else "" }}{{ stock.change_pct }}%</span></div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endfor %}
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterStocks(){
+    const q=document.getElementById('stockSearch').value.toLowerCase();
+    document.querySelectorAll('.stock-item').forEach(r=>{r.style.display=(r.dataset.symbol.includes(q)||r.dataset.name.includes(q))?'':'none'});
+    document.querySelectorAll('.ind-grp').forEach(g=>{const v=g.querySelectorAll('.stock-item:not([style*="none"])');g.style.display=v.length?'':'none'});
+}
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.whl
+
+# Virtual environment
+venv/
+env/
+.env
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude Code / MCP tools
+.claude/
+.playwright-mcp/
+.serena/
+
+# Screenshots & images (dev artifacts)
+screenshots/
+*.png
+*.jpg
+*.jpeg
+
+# PDF docs
+*.pdf
+
+# Planning docs
+Web UI Phase 1 — Guidance & Proposal.txt
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Static placeholders (empty dirs)
+app/static/css/
+app/static/js/
