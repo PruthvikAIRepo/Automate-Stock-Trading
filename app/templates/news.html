@@ -4,19 +4,25 @@
 <div class="bc"><a href="/">Home</a><span class="sep">/</span><span>News</span></div>
 <div class="sh">
     <span class="st"><i class="bi bi-newspaper" style="color:var(--accent)"></i> Market News</span>
-    <span class="tip" data-tip="News is scraped from 10 sources every 10 min during market hours and classified by AI" style="margin-left:auto;font-size:.58rem;color:var(--green);display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 2s ease-in-out infinite"></span>LIVE<span id="news-count" style="color:var(--text3)">· {{ total }} articles</span><span class="tip-icon">?</span></span>
+    <span style="margin-left:auto;font-size:.58rem;color:var(--green);display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 2s ease-in-out infinite"></span>LIVE<span id="news-count" style="color:var(--text3)">· {{ total }} articles</span></span>
+</div>
+
+<!-- AI Info Strip -->
+<div class="news-info-strip">
+    <i class="bi bi-stars"></i>
+    <span>10 sources · AI classifies category, sentiment & stock tags · Auto-refreshes every 60s</span>
 </div>
 
 <!-- Category Filter Tabs -->
 <div class="tabs" style="margin-bottom:12px;flex-wrap:wrap">
     <a href="/news?category=all" class="tab {% if category=='all' %}active{% endif %}">All</a>
-    <a href="/news?category=Market+Pulse" class="tab tip {% if category=='Market Pulse' %}active{% endif %}" data-tip="Sensex, Nifty moves, FII/DII flows">Market Pulse</a>
-    <a href="/news?category=Stock+Alert" class="tab tip {% if category=='Stock Alert' %}active{% endif %}" data-tip="Company earnings, results, corporate actions">Stock Alert</a>
-    <a href="/news?category=Sector+Watch" class="tab tip {% if category=='Sector Watch' %}active{% endif %}" data-tip="Sector-wide impacts — auto, pharma, banking">Sector Watch</a>
-    <a href="/news?category=IPO" class="tab tip {% if category=='IPO' %}active{% endif %}" data-tip="IPO filings, price bands, GMP, listings">IPO</a>
-    <a href="/news?category=Global+Impact" class="tab tip {% if category=='Global Impact' %}active{% endif %}" data-tip="Global events moving Indian markets">Global Impact</a>
-    <a href="/news?category=Policy+%26+Regulation" class="tab tip {% if category=='Policy & Regulation' %}active{% endif %}" data-tip="RBI, SEBI, budget, GST, FDI policy">Policy</a>
-    <a href="/news?category=Expert+Opinion" class="tab tip {% if category=='Expert Opinion' %}active{% endif %}" data-tip="Analyst views, upgrades, targets">Expert</a>
+    <a href="/news?category=Market+Pulse" class="tab {% if category=='Market Pulse' %}active{% endif %}">Market Pulse</a>
+    <a href="/news?category=Stock+Alert" class="tab {% if category=='Stock Alert' %}active{% endif %}">Stock Alert</a>
+    <a href="/news?category=Sector+Watch" class="tab {% if category=='Sector Watch' %}active{% endif %}">Sector Watch</a>
+    <a href="/news?category=IPO" class="tab {% if category=='IPO' %}active{% endif %}">IPO</a>
+    <a href="/news?category=Global+Impact" class="tab {% if category=='Global Impact' %}active{% endif %}">Global Impact</a>
+    <a href="/news?category=Policy+%26+Regulation" class="tab {% if category=='Policy & Regulation' %}active{% endif %}">Policy</a>
+    <a href="/news?category=Expert+Opinion" class="tab {% if category=='Expert Opinion' %}active{% endif %}">Expert</a>
 </div>
 
 <div id="news-feed">
@@ -34,10 +40,10 @@
     <a href="{{ article.url }}" target="_blank" rel="noopener" class="news-link" aria-label="{{ article.title }}"></a>
     <div class="card-body" style="padding:12px 14px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <span class="news-breaking tip" data-tip="Published less than 1 hour ago" style="z-index:2">BREAKING</span>
+            <span class="news-breaking">BREAKING</span>
             {% set cat = article.category %}
-            <span class="news-cat tip" data-tip="AI-classified category" style="z-index:2;background:{% if cat=='Market Pulse' %}var(--accent-bg);color:var(--accent){% elif cat=='Stock Alert' %}var(--green-bg);color:var(--green){% elif cat=='Sector Watch' %}rgba(249,115,22,.1);color:#f97316{% elif cat=='Global Impact' %}rgba(167,139,250,.1);color:var(--purple){% elif cat=='IPO' %}rgba(245,158,11,.1);color:var(--gold){% elif cat=='Policy & Regulation' %}rgba(100,116,139,.15);color:var(--text2){% elif cat=='Expert Opinion' %}rgba(139,92,246,.15);color:#a78bfa{% else %}rgba(100,116,139,.1);color:var(--text3){% endif %}">{{ cat }}</span>
-            {% if article.sentiment %}<span class="news-sentiment tip sentiment-{{ article.sentiment|lower }}" data-tip="AI-detected market sentiment" style="z-index:2">{% if article.sentiment == 'Bullish' %}<i class="bi bi-arrow-up-circle-fill"></i>{% elif article.sentiment == 'Bearish' %}<i class="bi bi-arrow-down-circle-fill"></i>{% elif article.sentiment == 'Mixed' %}<i class="bi bi-arrow-left-right"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %} {{ article.sentiment }}</span>{% endif %}
+            <span class="news-cat" style="background:{% if cat=='Market Pulse' %}var(--accent-bg);color:var(--accent){% elif cat=='Stock Alert' %}var(--green-bg);color:var(--green){% elif cat=='Sector Watch' %}rgba(249,115,22,.1);color:#f97316{% elif cat=='Global Impact' %}rgba(167,139,250,.1);color:var(--purple){% elif cat=='IPO' %}rgba(245,158,11,.1);color:var(--gold){% elif cat=='Policy & Regulation' %}rgba(100,116,139,.15);color:var(--text2){% elif cat=='Expert Opinion' %}rgba(139,92,246,.15);color:#a78bfa{% else %}rgba(100,116,139,.1);color:var(--text3){% endif %}">{{ cat }}</span>
+            {% if article.sentiment %}<span class="news-sentiment sentiment-{{ article.sentiment|lower }}">{% if article.sentiment == 'Bullish' %}<i class="bi bi-arrow-up-circle-fill"></i>{% elif article.sentiment == 'Bearish' %}<i class="bi bi-arrow-down-circle-fill"></i>{% elif article.sentiment == 'Mixed' %}<i class="bi bi-arrow-left-right"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %} {{ article.sentiment }}</span>{% endif %}
         </div>
         <div class="news-title" style="font-size:.88rem">{{ article.title }}</div>
         <div class="news-summary">{{ article.summary }}</div>
@@ -45,7 +51,7 @@
             <span><i class="bi bi-clock"></i> {{ article.published_at|timeago }}</span>
             <span>{{ article.source }}</span>
             {% for sym in article.related_stocks %}
-            <a href="/stock/{{ sym }}" class="tip" data-tip="AI-tagged stock — view details" style="color:var(--accent);font-weight:600;position:relative;z-index:2">{{ sym }}</a>
+            <a href="/stock/{{ sym }}" style="color:var(--accent);font-weight:600;position:relative;z-index:2">{{ sym }}</a>
             {% endfor %}
         </div>
     </div>
@@ -59,8 +65,8 @@
         <a href="{{ article.url }}" target="_blank" rel="noopener" class="news-link" aria-label="{{ article.title }}"></a>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
             {% set cat = article.category %}
-            <span class="news-cat tip" data-tip="AI-classified category" style="z-index:2;background:{% if cat=='Market Pulse' %}var(--accent-bg);color:var(--accent){% elif cat=='Stock Alert' %}var(--green-bg);color:var(--green){% elif cat=='Sector Watch' %}rgba(249,115,22,.1);color:#f97316{% elif cat=='Global Impact' %}rgba(167,139,250,.1);color:var(--purple){% elif cat=='IPO' %}rgba(245,158,11,.1);color:var(--gold){% elif cat=='Policy & Regulation' %}rgba(100,116,139,.15);color:var(--text2){% elif cat=='Expert Opinion' %}rgba(139,92,246,.15);color:#a78bfa{% else %}rgba(100,116,139,.1);color:var(--text3){% endif %}">{{ cat }}</span>
-            {% if article.sentiment %}<span class="news-sentiment tip sentiment-{{ article.sentiment|lower }}" data-tip="AI-detected market sentiment" style="z-index:2">{% if article.sentiment == 'Bullish' %}<i class="bi bi-arrow-up-circle-fill"></i>{% elif article.sentiment == 'Bearish' %}<i class="bi bi-arrow-down-circle-fill"></i>{% elif article.sentiment == 'Mixed' %}<i class="bi bi-arrow-left-right"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %} {{ article.sentiment }}</span>{% endif %}
+            <span class="news-cat" style="background:{% if cat=='Market Pulse' %}var(--accent-bg);color:var(--accent){% elif cat=='Stock Alert' %}var(--green-bg);color:var(--green){% elif cat=='Sector Watch' %}rgba(249,115,22,.1);color:#f97316{% elif cat=='Global Impact' %}rgba(167,139,250,.1);color:var(--purple){% elif cat=='IPO' %}rgba(245,158,11,.1);color:var(--gold){% elif cat=='Policy & Regulation' %}rgba(100,116,139,.15);color:var(--text2){% elif cat=='Expert Opinion' %}rgba(139,92,246,.15);color:#a78bfa{% else %}rgba(100,116,139,.1);color:var(--text3){% endif %}">{{ cat }}</span>
+            {% if article.sentiment %}<span class="news-sentiment sentiment-{{ article.sentiment|lower }}">{% if article.sentiment == 'Bullish' %}<i class="bi bi-arrow-up-circle-fill"></i>{% elif article.sentiment == 'Bearish' %}<i class="bi bi-arrow-down-circle-fill"></i>{% elif article.sentiment == 'Mixed' %}<i class="bi bi-arrow-left-right"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %} {{ article.sentiment }}</span>{% endif %}
             <span style="font-size:.6rem;color:var(--text3)">{{ article.published_at|timeago }}</span>
         </div>
         <div class="news-title">{{ article.title }}</div>
@@ -68,7 +74,7 @@
         <div class="news-meta">
             <span><i class="bi bi-journal-text"></i> {{ article.source }}</span>
             {% for sym in article.related_stocks %}
-            <a href="/stock/{{ sym }}" class="tip" data-tip="AI-tagged stock — view details" style="color:var(--accent);font-weight:600;position:relative;z-index:2">{{ sym }}</a>
+            <a href="/stock/{{ sym }}" style="color:var(--accent);font-weight:600;position:relative;z-index:2">{{ sym }}</a>
             {% endfor %}
         </div>
     </div>
