@@ -289,6 +289,15 @@ def fetch_all_indices():
     # Ensure hero has NIFTY 50 first, then BANK NIFTY
     hero.sort(key=lambda x: 0 if "50" in x["name"] and "BANK" not in x["name"] else 1)
 
+    # Real sparklines for hero indices (2 API calls — fast & high-visibility)
+    for h in hero:
+        try:
+            candles = fetch_index_history(h["token"], h["exchange"], "ONE_DAY", days=15)
+            if candles and len(candles) >= 2:
+                h["sparkline"] = _sparkline_svg(candles)
+        except Exception:
+            pass  # Keep existing dummy sparkline
+
     return {
         "all_table": all_table,
         "popular": popular,
@@ -385,9 +394,33 @@ def _fallback_indices():
 
 
 def get_market_context():
-    """Get additional market context data (breadth, FII/DII)."""
-    from app.dummy_data import MARKET_BREADTH, FII_DII
+    """
+    Get real market context — breadth, FII/DII, valuation from NSE.
+    Falls back to dummy data if NSE is unavailable.
+    """
+    from app.dummy_data import MARKET_BREADTH as DUMMY_BREADTH, FII_DII as DUMMY_FII_DII
+
+    try:
+        from app.services.nse_data import fetch_market_breadth, fetch_fii_dii, fetch_nifty_valuation
+
+        breadth = fetch_market_breadth() or DUMMY_BREADTH
+        fii_dii = fetch_fii_dii() or DUMMY_FII_DII
+        valuation = fetch_nifty_valuation()  # None is OK — template handles it
+
+        # Tag whether data is real or dummy
+        if breadth is not DUMMY_BREADTH:
+            breadth["live"] = True
+        if fii_dii is not DUMMY_FII_DII:
+            fii_dii["live"] = True
+
+    except Exception as e:
+        log.error("NSE data fetch failed, using dummy: %s", e)
+        breadth = DUMMY_BREADTH
+        fii_dii = DUMMY_FII_DII
+        valuation = None
+
     return {
-        "breadth": MARKET_BREADTH,
-        "fii_dii": FII_DII,
+        "breadth": breadth,
+        "fii_dii": fii_dii,
+        "valuation": valuation,
     }

@@ -20,7 +20,7 @@ _cache = {"analysis": None, "timestamp": 0, "data_hash": ""}
 CACHE_TTL = 300  # 5 minutes
 
 
-def _build_market_snapshot(idx_data, breadth, fii_dii):
+def _build_market_snapshot(idx_data, breadth, fii_dii, valuation=None):
     """
     Build a structured market data snapshot for the AI prompt.
     Only includes what matters for investor-grade analysis.
@@ -32,8 +32,6 @@ def _build_market_snapshot(idx_data, breadth, fii_dii):
 
     # Top gainers and losers from sector performance
     sectors = idx_data.get("sector_performance", [])
-    top_gainers = [s for s in sectors if s["change_pct"] > 0]
-    top_losers = [s for s in sectors if s["change_pct"] < 0]
 
     # Broad market indices for context
     all_table = idx_data.get("all_table", [])
@@ -73,6 +71,15 @@ def _build_market_snapshot(idx_data, breadth, fii_dii):
             for i in broad_indices
         ],
     }
+
+    # Add valuation if available (from NSE — real PE/PB/DY)
+    if valuation:
+        snapshot["nifty_valuation"] = {
+            "pe_ratio": valuation.get("pe", 0),
+            "pb_ratio": valuation.get("pb", 0),
+            "dividend_yield_pct": valuation.get("dy", 0),
+        }
+
     return snapshot
 
 
@@ -95,17 +102,20 @@ RULES:
 - Use plain English. No jargon like "consolidation", "technical breakout", "resistance levels".
 - Reference SPECIFIC numbers from the data (e.g., "IT is up 2.6% today" not "IT is performing well").
 - Explain WHY sectors might be moving using your market knowledge (e.g., IT rises when rupee weakens, banks fall on rate hike fears).
-- The "action" section must give different advice for SIP investors vs lumpsum investors.
+- The "action" section must give different advice for SIP investors vs lumpsum investors vs F&O traders.
 - Be honest — if you're uncertain about a reason, say "likely because" not state it as fact.
 - Keep each section concise: 2-3 sentences max.
 - VIX interpretation: below 13 = very calm, 13-18 = normal, 18-24 = elevated fear, above 24 = high panic.
+- If nifty_valuation data is present, use PE ratio to judge if market is cheap (<18), fair (18-22), expensive (22-25), or very expensive (>25). Factor this into your advice.
+- Breadth divergence is KEY: if Nifty is up but advance% is below 45%, warn about narrow rally. If Nifty is down but advance% above 55%, note hidden strength.
+- FII selling + DII buying = domestic confidence despite foreign outflow. FII buying + DII selling = be cautious, rally may not sustain.
 
 Return ONLY valid JSON:
 {{
-  "market_pulse": "What's happening in the market right now and why. Reference Nifty, Bank Nifty, and the most notable sector moves.",
+  "market_pulse": "What's happening in the market right now and why. Reference Nifty, Bank Nifty, and the most notable sector moves. If breadth diverges from index direction, highlight it.",
   "sector_spotlight": "Analyze the biggest sector winners and losers. Explain likely reasons WHY they're moving. Connect sectors to real-world events if possible.",
-  "risk_check": "Assess overall risk level based on VIX, breadth, and FII/DII flows. Tell the investor whether to worry or stay calm.",
-  "investor_action": "Specific advice for SIP investors and lumpsum investors. What should they do today? Be specific and honest."
+  "risk_check": "Assess overall risk level based on VIX, breadth, FII/DII flows, and valuation (if PE data available). Tell the investor whether to worry or stay calm. Be specific about what the numbers mean.",
+  "investor_action": "Specific advice for: (1) SIP investors — should they increase/decrease/continue? (2) Lumpsum investors — deploy now or wait? (3) Short-term traders — which sectors to watch? Be specific and honest."
 }}"""
 
 
@@ -115,7 +125,7 @@ def _data_hash(snapshot):
     return f"{n.get('value', 0):.0f}_{n.get('change_pct', 0):.1f}"
 
 
-def generate_market_analysis(idx_data, breadth, fii_dii):
+def generate_market_analysis(idx_data, breadth, fii_dii, valuation=None):
     """
     Generate AI market analysis from live data.
 
@@ -128,7 +138,7 @@ def generate_market_analysis(idx_data, breadth, fii_dii):
         return None
 
     # Build snapshot
-    snapshot = _build_market_snapshot(idx_data, breadth, fii_dii)
+    snapshot = _build_market_snapshot(idx_data, breadth, fii_dii, valuation)
     current_hash = _data_hash(snapshot)
 
     # Check cache — return cached if fresh and data hasn't changed much

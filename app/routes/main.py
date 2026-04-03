@@ -39,22 +39,29 @@ def sector_detail(slug):
 
 @main_bp.route("/indices")
 def indices():
+    from datetime import datetime
     from app.services.indices_service import fetch_all_indices, get_market_context
-    from app.services.market_ai import generate_market_analysis
+    from app.services.global_markets import fetch_global_indices
+    from app.services.nse_data import is_market_hours
 
     idx_data = fetch_all_indices()
     market_ctx = get_market_context()
+    valuation = market_ctx.get("valuation")
 
-    # Real AI market analysis (returns None if no API key or error)
-    ai_analysis = generate_market_analysis(idx_data, market_ctx["breadth"], market_ctx["fii_dii"])
+    # Global markets (Yahoo Finance — returns None if unavailable)
+    global_data = fetch_global_indices()
 
     return render_template(
         "indices.html",
         idx=idx_data,
         breadth=market_ctx["breadth"],
         fii_dii=market_ctx["fii_dii"],
+        valuation=valuation,
+        globals=global_data,
         is_live=idx_data["live"],
-        ai=ai_analysis,
+        is_market_hours=is_market_hours(),
+        ai=None,
+        updated_at=datetime.now().strftime("%H:%M:%S"),
     )
 
 

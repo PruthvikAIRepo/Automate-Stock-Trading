@@ -9,7 +9,10 @@
         <i class="bi bi-bar-chart-line" style="color:var(--accent)"></i>
         <span>Market Indices</span>
     </div>
-    <div style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        {% if is_market_hours %}
+            <span class="auto-refresh-badge"><i class="bi bi-arrow-repeat"></i> Auto-refresh</span>
+        {% endif %}
         <span class="ai-badge"><i class="bi bi-stars"></i> AI Powered</span>
         <span class="live-badge {{ 'on' if is_live else 'off' }}">
             {% if is_live %}<span class="status-dot" style="width:5px;height:5px"></span> LIVE{% else %}<i class="bi bi-clock"></i> DEMO{% endif %}
@@ -71,9 +74,6 @@
                 &middot; Bank Nifty at <strong>{{ "{:,.0f}".format(b.value) }}</strong>
                 (<span class="{{ 'text-up' if b.change >= 0 else 'text-down' }}">{{ "+" if b.change >= 0 else "" }}{{ b.change_pct }}%</span>).
             </span>
-            <div class="ai-no-key-hint">
-                <i class="bi bi-key"></i> Add <code>OPENAI_API_KEY</code> in .env to unlock real AI analysis — market pulse, sector breakdown, risk assessment, and actionable advice.
-            </div>
         {% else %}
             <span class="ai-text">Connect Angel One API to see live AI market analysis.</span>
         {% endif %}
@@ -184,16 +184,20 @@
 <div class="val-card">
     <div class="val-header">
         <span><i class="bi bi-speedometer2" style="color:var(--gold)"></i> Is the Market Cheap or Expensive?</span>
-        <span class="ai-badge"><i class="bi bi-stars"></i> AI</span>
+        {% if valuation %}
+            <span class="live-badge on" style="font-size:.5rem;padding:2px 8px"><span class="status-dot" style="width:4px;height:4px"></span> NSE Live</span>
+        {% else %}
+            <span class="ai-badge"><i class="bi bi-stars"></i> AI</span>
+        {% endif %}
     </div>
     <div class="val-sub">Based on Nifty 50 PE ratio — helps you decide if it's a good time to invest</div>
 
-    {% set pe_val = 19.8 %}
+    {% set pe_val = valuation.pe if valuation else 19.8 %}
     <div class="val-meter">
         <div class="val-meter-labels">
-            <span style="color:var(--green)">Cheap<br><span style="font-size:.5rem;font-weight:400">PE &lt; 15</span></span>
-            <span style="color:var(--gold)">Fair Value<br><span style="font-size:.5rem;font-weight:400">PE 15-20</span></span>
-            <span style="color:#f97316">Getting Expensive<br><span style="font-size:.5rem;font-weight:400">PE 20-25</span></span>
+            <span style="color:var(--green)">Cheap<br><span style="font-size:.5rem;font-weight:400">PE &lt; 18</span></span>
+            <span style="color:var(--gold)">Fair Value<br><span style="font-size:.5rem;font-weight:400">PE 18-22</span></span>
+            <span style="color:#f97316">Getting Expensive<br><span style="font-size:.5rem;font-weight:400">PE 22-25</span></span>
             <span style="color:var(--red)">Expensive<br><span style="font-size:.5rem;font-weight:400">PE &gt; 25</span></span>
         </div>
         <div class="val-meter-track">
@@ -204,24 +208,41 @@
             {% set pe_pos = ((pe_val - 10) / 25) * 100 %}
             <div class="val-meter-needle" style="left:{{ [([pe_pos, 1]|max), 99]|min }}%">
                 <div class="val-meter-needle-dot"></div>
-                <div class="val-meter-needle-label">PE {{ pe_val }}</div>
+                <div class="val-meter-needle-label">PE {{ "%.1f"|format(pe_val) }}</div>
             </div>
         </div>
     </div>
+
+    {% if valuation %}
+    <div class="val-metrics">
+        <div class="val-metric">
+            <span class="val-metric-label">PE Ratio</span>
+            <span class="val-metric-value">{{ "%.2f"|format(valuation.pe) }}</span>
+        </div>
+        <div class="val-metric">
+            <span class="val-metric-label">PB Ratio</span>
+            <span class="val-metric-value">{{ "%.2f"|format(valuation.pb) }}</span>
+        </div>
+        <div class="val-metric">
+            <span class="val-metric-label">Dividend Yield</span>
+            <span class="val-metric-value">{{ "%.2f"|format(valuation.dy) }}%</span>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="ai-verdict-box">
         <i class="bi bi-stars" style="color:#a78bfa"></i>
         <strong>AI Verdict:</strong>
         {% if ai and ai.investor_action %}
             {{ ai.investor_action }}
-        {% elif pe_val < 15 %}
-            Market is <strong style="color:var(--green)">undervalued</strong>. Great time to invest more.
-        {% elif pe_val < 20 %}
+        {% elif pe_val < 18 %}
+            Market is <strong style="color:var(--green)">undervalued</strong>. Great time to invest more — historically delivers 15%+ returns over 12 months.
+        {% elif pe_val < 22 %}
             Market is at <strong style="color:var(--gold)">fair value</strong>. Continue your regular SIPs with confidence.
         {% elif pe_val < 25 %}
             Market is <strong style="color:#f97316">slightly expensive</strong>. Continue SIPs, avoid large lumpsums.
         {% else %}
-            Market is <strong style="color:var(--red)">expensive</strong>. Consider booking partial profits.
+            Market is <strong style="color:var(--red)">expensive</strong>. Consider booking partial profits and keeping cash ready for dips.
         {% endif %}
     </div>
 </div>
@@ -270,31 +291,31 @@
 
 {# ═══ SECTION 6: GLOBAL MARKETS ═══ #}
 <div style="margin-bottom:16px">
-    <div class="section-header">
+    <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
         <span><i class="bi bi-globe2" style="color:var(--accent)"></i> How Are Global Markets Doing?</span>
+        {% if globals %}
+            <span class="live-badge on" style="font-size:.5rem;padding:2px 8px"><span class="status-dot" style="width:4px;height:4px"></span> Yahoo Finance</span>
+        {% endif %}
     </div>
     <div class="section-sub">World markets affect Indian markets — if US markets fall overnight, Indian markets often open lower</div>
     <div class="global-strip">
-        {% set globals = [
-            {"name": "GIFT Nifty", "desc": "Indian futures", "val": 24920, "chg": 0.26, "flag": "🇮🇳"},
-            {"name": "Dow Jones", "desc": "US (30 companies)", "val": 42587, "chg": 0.34, "flag": "🇺🇸"},
-            {"name": "Nasdaq", "desc": "US Tech", "val": 16412, "chg": 0.81, "flag": "🇺🇸"},
-            {"name": "S&P 500", "desc": "US (500 companies)", "val": 5712, "chg": 0.42, "flag": "🇺🇸"},
-            {"name": "Nikkei 225", "desc": "Japan", "val": 37840, "chg": -0.22, "flag": "🇯🇵"},
-            {"name": "Hang Seng", "desc": "Hong Kong", "val": 22180, "chg": 0.15, "flag": "🇭🇰"},
-            {"name": "FTSE 100", "desc": "UK", "val": 8620, "chg": 0.31, "flag": "🇬🇧"},
-        ] %}
-        {% for g in globals %}
-        <div class="global-item">
-            <div class="global-nm">{{ g.flag }} {{ g.name }}</div>
-            <div style="font-size:.52rem;color:var(--text3)">{{ g.desc }}</div>
-            <div class="global-val">{{ "{:,.0f}".format(g.val) }}</div>
-            <div class="global-chg {{ 'text-up' if g.chg >= 0 else 'text-down' }}">
-                <i class="bi {{ 'bi-caret-up-fill' if g.chg >= 0 else 'bi-caret-down-fill' }}" style="font-size:.45rem"></i>
-                {{ "+" if g.chg >= 0 else "" }}{{ g.chg }}%
+        {% if globals %}
+            {% for g in globals %}
+            <div class="global-item">
+                <div class="global-nm">{{ g.flag }} {{ g.name }}</div>
+                <div style="font-size:.52rem;color:var(--text3)">{{ g.desc }}</div>
+                <div class="global-val">{{ "{:,.0f}".format(g.val) }}</div>
+                <div class="global-chg {{ 'text-up' if g.chg >= 0 else 'text-down' }}">
+                    <i class="bi {{ 'bi-caret-up-fill' if g.chg >= 0 else 'bi-caret-down-fill' }}" style="font-size:.45rem"></i>
+                    {{ "+" if g.chg >= 0 else "" }}{{ g.chg }}%
+                </div>
             </div>
-        </div>
-        {% endfor %}
+            {% endfor %}
+        {% else %}
+            <div style="padding:12px;font-size:.7rem;color:var(--text3);text-align:center;width:100%">
+                <i class="bi bi-cloud-slash"></i> Global market data temporarily unavailable
+            </div>
+        {% endif %}
     </div>
 </div>
 
@@ -373,7 +394,11 @@
     <i class="bi bi-info-circle"></i>
     <span>
         {% if is_live %}
-            Live data from Angel One SmartAPI — {{ idx.total }} indices across NSE, BSE & MCX. Powered by StockPulse AI.
+            Live data from Angel One SmartAPI ({{ idx.total }} indices)
+            {% if breadth and breadth.get('live') %} + NSE (breadth, FII/DII{% if valuation %}, PE{% endif %}){% endif %}
+            {% if globals %} + Yahoo Finance (global markets){% endif %}.
+            Updated {{ updated_at }} IST.
+            {% if is_market_hours %}Auto-refreshes every 60s.{% endif %}
         {% else %}
             Sample data for preview. Add Angel One SmartAPI credentials in .env for real market data.
         {% endif %}
@@ -463,5 +488,56 @@ function sortTable(colIdx, type) {
 
 // ── Initial state: show "Popular" tab ──
 applyFilters();
+
+// ── Restore state after auto-refresh ──
+(function restoreState() {
+    const tab = sessionStorage.getItem('idx_tab');
+    const search = sessionStorage.getItem('idx_search');
+    const scroll = sessionStorage.getItem('idx_scroll');
+
+    if (tab && tab !== 'popular') {
+        const tabBtn = document.querySelector('.idx-tab[onclick*="' + tab + '"]');
+        if (tabBtn) filterTab(tab, tabBtn);
+    }
+    if (search) {
+        document.getElementById('idxSearch').value = search;
+        searchIndices(search);
+    }
+    if (scroll) {
+        window.scrollTo(0, parseInt(scroll));
+    }
+
+    sessionStorage.removeItem('idx_tab');
+    sessionStorage.removeItem('idx_search');
+    sessionStorage.removeItem('idx_scroll');
+})();
+
+// ── Auto-refresh during market hours (60s) ──
+(function autoRefresh() {
+    const isMarketHours = {{ 'true' if is_market_hours else 'false' }};
+    if (!isMarketHours) return;
+
+    setTimeout(function() {
+        // Only refresh if tab is visible (don't waste API calls in background)
+        if (document.hidden) {
+            document.addEventListener('visibilitychange', function retry() {
+                if (!document.hidden) {
+                    document.removeEventListener('visibilitychange', retry);
+                    doRefresh();
+                }
+            });
+        } else {
+            doRefresh();
+        }
+    }, 60000);
+
+    function doRefresh() {
+        // Save state before reload
+        sessionStorage.setItem('idx_scroll', window.scrollY);
+        sessionStorage.setItem('idx_tab', currentTab);
+        sessionStorage.setItem('idx_search', document.getElementById('idxSearch').value);
+        location.reload();
+    }
+})();
 </script>
 {% endblock %}
