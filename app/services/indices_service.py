@@ -385,7 +385,7 @@ def fetch_sector_timeframe_returns(sector_perf):
             continue
 
         try:
-            candles = fetch_index_history(token, "NSE", "ONE_DAY", days=90)
+            candles = fetch_index_history(token, "NSE", "ONE_DAY", days=180)
             if not candles or len(candles) < 5:
                 continue
 
@@ -411,6 +411,11 @@ def fetch_sector_timeframe_returns(sector_perf):
             if total >= 66:
                 old_close = closes[-66][1]
                 tf["3M"] = round((current - old_close) / old_close * 100, 2)
+
+            # 6M ≈ 132 trading days
+            if total >= 132:
+                old_close = closes[-132][1]
+                tf["6M"] = round((current - old_close) / old_close * 100, 2)
 
             results[token] = tf
 

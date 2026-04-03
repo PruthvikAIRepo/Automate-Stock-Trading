@@ -305,6 +305,46 @@ def fetch_nifty_valuation():
         return None
 
 
+# ─── Index PE & Breadth from allIndices ──────────────────────────────────────
+
+def fetch_index_pe_and_breadth(nse_name):
+    """
+    Get PE ratio and advance/decline for a specific index from allIndices.
+    Returns: {"pe": float, "pb": float, "dy": float, "advances": int, "declines": int, "unchanged": int} or None
+    """
+    data = _fetch_all_indices()
+    if not data:
+        return None
+
+    target = nse_name.upper()
+    for item in data.get("data", []):
+        idx_name = str(item.get("index", "")).upper()
+        if idx_name == target:
+            pe = float(item.get("pe", 0) or 0)
+            pb = float(item.get("pb", 0) or 0)
+            dy = float(item.get("dy", 0) or 0)
+            adv = int(item.get("advances", 0) or 0)
+            dec = int(item.get("declines", 0) or 0)
+            unch = int(item.get("unchanged", 0) or 0)
+            return {
+                "pe": round(pe, 2) if pe else None,
+                "pb": round(pb, 2) if pb else None,
+                "dy": round(dy, 2) if dy else None,
+                "advances": adv,
+                "declines": dec,
+                "unchanged": unch,
+                "total": adv + dec + unch,
+            }
+    return None
+
+
+# Angel One name → NSE allIndices name for PE/breadth lookup
+_HERO_NSE_MAP = {
+    "NIFTY": "NIFTY 50",
+    "BANKNIFTY": "NIFTY BANK",
+}
+
+
 # ─── Index Constituents ──────────────────────────────────────────────────────
 
 # Angel One symbol → NSE index name for constituent lookup
@@ -418,10 +458,33 @@ def fetch_index_constituents(angel_name):
         if not stocks:
             return None
 
+        # Approximate point contribution per stock
+        # Method: distribute index change proportionally to each stock's
+        # price-weighted change (larger stocks contribute more points)
+        # weight_proxy = stock_ltp (higher priced stocks generally have higher weights)
+        total_weighted = sum(s["ltp"] * abs(s["change_pct"]) for s in stocks if s["ltp"] > 0)
+        index_change = float(data.get("metadata", {}).get("change", 0) or 0)
+
+        if total_weighted > 0 and index_change != 0:
+            for s in stocks:
+                if s["ltp"] > 0:
+                    weight_share = (s["ltp"] * abs(s["change_pct"])) / total_weighted
+                    s["pts_contribution"] = round(index_change * weight_share * (1 if s["change_pct"] >= 0 else -1), 1)
+                else:
+                    s["pts_contribution"] = 0
+        else:
+            for s in stocks:
+                s["pts_contribution"] = 0
+
         # Sort by change_pct for gainers/losers
         sorted_by_change = sorted(stocks, key=lambda s: s["change_pct"], reverse=True)
         top_gainers = [s for s in sorted_by_change if s["change_pct"] > 0][:5]
         top_losers = [s for s in reversed(sorted_by_change) if s["change_pct"] < 0][:5]
+
+        # Top contributors/detractors by point impact
+        sorted_by_pts = sorted(stocks, key=lambda s: s["pts_contribution"], reverse=True)
+        top_contributors = [s for s in sorted_by_pts if s["pts_contribution"] > 0][:5]
+        top_detractors = [s for s in reversed(sorted_by_pts) if s["pts_contribution"] < 0][:5]
 
         # Sector breakdown
         sector_map = {}
@@ -450,6 +513,9 @@ def fetch_index_constituents(angel_name):
             "stocks": stocks,
             "top_gainers": top_gainers,
             "top_losers": top_losers,
+            "top_contributors": top_contributors,
+            "top_detractors": top_detractors,
+            "index_change_pts": round(index_change, 2),
             "sector_breakdown": sector_breakdown,
             "total": len(stocks),
         }

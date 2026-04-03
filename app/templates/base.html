@@ -528,25 +528,27 @@
         .idx-mover-name{font-size:.52rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
         .idx-mover-vals{display:flex;align-items:center;gap:6px;flex-shrink:0}
         .idx-mover-ltp{font-size:.68rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text2)}
-        /* Sector breakdown */
+        .idx-mover-pts{font-size:.62rem;font-weight:700;font-variant-numeric:tabular-nums}
+        .idx-ai-narrative{display:flex;gap:10px;align-items:flex-start;background:linear-gradient(135deg,rgba(17,24,39,.95),rgba(15,15,35,.95));border:1px solid rgba(139,92,246,.25);border-radius:12px;padding:12px 16px;margin-bottom:12px}
+        .idx-ai-text{font-size:.75rem;color:var(--text2);line-height:1.6}
+        .idx-ai-tag{font-size:.5rem;color:var(--text3);margin-top:4px;display:flex;align-items:center;gap:4px}
+        /* Sector breakdown donut */
         .idx-sector-breakdown{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden}
-        .idx-sector-bars{padding:10px 14px}
-        .idx-sector-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
-        .idx-sector-row:last-child{border-bottom:none}
-        .idx-sector-left{min-width:130px;flex-shrink:0}
-        .idx-sector-name{font-size:.68rem;font-weight:600;display:block}
-        .idx-sector-count{font-size:.5rem;color:var(--text3)}
-        .idx-sector-bar-area{flex:1;height:6px;background:var(--bg-elevated);border-radius:3px;overflow:hidden}
-        .idx-sector-bar{height:100%;border-radius:3px;min-width:4px;transition:width .3s}
-        .idx-sector-bar.up{background:var(--green)}
-        .idx-sector-bar.down{background:var(--red)}
+        .idx-sector-donut-wrap{display:flex;gap:16px;padding:14px;align-items:flex-start}
+        .idx-sector-donut-left{flex-shrink:0}
+        .idx-sector-legend{flex:1;min-width:0}
+        .idx-legend-item{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:.65rem}
+        .idx-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+        .idx-legend-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2);font-weight:500}
+        .idx-legend-count{font-size:.55rem;color:var(--text3);min-width:14px;text-align:right}
         @media(max-width:640px){
             .idx-chart-container{height:280px}
             .idx-detail-ltp{font-size:1.4rem}
             .idx-detail-grid{grid-template-columns:1fr}
             .idx-movers-grid{grid-template-columns:1fr}
             .idx-mover-card:first-child{border-right:none;border-bottom:1px solid var(--border)}
-            .idx-sector-left{min-width:100px}
+            .idx-sector-donut-wrap{flex-direction:column;align-items:center}
+            .idx-sector-donut-left{margin-bottom:8px}
         }
 
         /* Sector perf header */

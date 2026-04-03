@@ -42,7 +42,7 @@ def indices():
     from datetime import datetime
     from app.services.indices_service import fetch_all_indices, get_market_context
     from app.services.global_markets import fetch_global_indices
-    from app.services.nse_data import is_market_hours
+    from app.services.nse_data import is_market_hours, fetch_index_pe_and_breadth, _HERO_NSE_MAP
     from app.services.market_ai import generate_market_analysis
 
     idx_data = fetch_all_indices()
@@ -51,6 +51,17 @@ def indices():
 
     # Global markets (Yahoo Finance — returns None if unavailable)
     global_data = fetch_global_indices()
+
+    # Enrich hero cards with PE ratio + advancers count from NSE
+    for h in idx_data.get("hero", []):
+        nse_name = _HERO_NSE_MAP.get(h.get("name", "").upper())
+        if nse_name:
+            info = fetch_index_pe_and_breadth(nse_name)
+            if info:
+                h["pe"] = info["pe"]
+                h["advances"] = info["advances"]
+                h["declines"] = info["declines"]
+                h["constituents_total"] = info["total"]
 
     # AI Market Intelligence (OpenAI GPT-4.1 mini — cached 5 min)
     ai = None
@@ -188,11 +199,18 @@ def index_detail(token):
     if index_info.get("exchange") == "NSE":
         constituents = fetch_index_constituents(index_info.get("name", ""))
 
+    # AI narrative — explains what moved this index
+    ai_narrative = None
+    if constituents:
+        from app.services.market_ai import generate_index_narrative
+        ai_narrative = generate_index_narrative(index_info, constituents)
+
     return render_template(
         "index_detail.html",
         index=index_info,
         breadth=index_breadth,
         constituents=constituents,
+        ai_narrative=ai_narrative,
         is_market_hours=is_market_hours(),
     )
 

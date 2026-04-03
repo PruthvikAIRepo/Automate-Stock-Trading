@@ -28,6 +28,17 @@
     </div>
 </div>
 
+{# ═══ AI NARRATIVE ═══ #}
+{% if ai_narrative %}
+<div class="idx-ai-narrative">
+    <div class="ai-orb" style="width:8px;height:8px"></div>
+    <div>
+        <div class="idx-ai-text">{{ ai_narrative }}</div>
+        <div class="idx-ai-tag"><i class="bi bi-stars" style="color:#a78bfa"></i> AI Analysis · GPT-4.1 mini</div>
+    </div>
+</div>
+{% endif %}
+
 {# ═══ CHART ═══ #}
 <div class="idx-chart-card">
     <div class="idx-tf-bar">
@@ -139,85 +150,131 @@
     </div>
 </div>
 
-{# ═══ TOP MOVERS ═══ #}
+{# ═══ RETURN ATTRIBUTION ═══ #}
 {% if constituents %}
 <div class="idx-movers-section">
     <div class="idx-movers-header">
-        <span><i class="bi bi-arrow-up-right" style="color:var(--green)"></i> Top Movers in {{ index.name }}</span>
+        <span><i class="bi bi-lightning-charge-fill" style="color:var(--gold)"></i> What Moved {{ index.name }}{% if constituents.index_change_pts %} ({{ "+" if constituents.index_change_pts >= 0 else "" }}{{ constituents.index_change_pts }} pts){% endif %}</span>
         <span style="font-size:.6rem;color:var(--text3)">{{ constituents.total }} stocks · NSE Live</span>
     </div>
     <div class="idx-movers-grid">
-        {# Top Gainers #}
+        {# Top Contributors (pushed index up) #}
         <div class="idx-mover-card">
-            <div class="idx-mover-title up"><i class="bi bi-graph-up-arrow"></i> Top Gainers</div>
-            {% if constituents.top_gainers %}
-            {% for s in constituents.top_gainers %}
+            <div class="idx-mover-title up"><i class="bi bi-graph-up-arrow"></i> Top Contributors</div>
+            {% if constituents.top_contributors %}
+            {% for s in constituents.top_contributors %}
             <div class="idx-mover-row">
                 <div class="idx-mover-sym">
                     <span class="idx-mover-symbol">{{ s.symbol }}</span>
-                    <span class="idx-mover-name">{{ s.name[:30] }}{% if s.name|length > 30 %}…{% endif %}</span>
+                    <span class="idx-mover-name">{{ s.name[:28] }}{% if s.name|length > 28 %}…{% endif %}</span>
                 </div>
                 <div class="idx-mover-vals">
-                    <span class="idx-mover-ltp">₹{{ "{:,.1f}".format(s.ltp) }}</span>
+                    <span class="idx-mover-pts text-up">+{{ s.pts_contribution }} pts</span>
                     <span class="pill up" style="font-size:.55rem">+{{ s.change_pct }}%</span>
                 </div>
             </div>
             {% endfor %}
             {% else %}
-            <div style="font-size:.7rem;color:var(--text3);padding:10px">No gainers today</div>
+            <div style="font-size:.7rem;color:var(--text3);padding:10px">No contributors today</div>
             {% endif %}
         </div>
 
-        {# Top Losers #}
+        {# Top Detractors (dragged index down) #}
         <div class="idx-mover-card">
-            <div class="idx-mover-title down"><i class="bi bi-graph-down-arrow"></i> Top Losers</div>
-            {% if constituents.top_losers %}
-            {% for s in constituents.top_losers %}
+            <div class="idx-mover-title down"><i class="bi bi-graph-down-arrow"></i> Top Detractors</div>
+            {% if constituents.top_detractors %}
+            {% for s in constituents.top_detractors %}
             <div class="idx-mover-row">
                 <div class="idx-mover-sym">
                     <span class="idx-mover-symbol">{{ s.symbol }}</span>
-                    <span class="idx-mover-name">{{ s.name[:30] }}{% if s.name|length > 30 %}…{% endif %}</span>
+                    <span class="idx-mover-name">{{ s.name[:28] }}{% if s.name|length > 28 %}…{% endif %}</span>
                 </div>
                 <div class="idx-mover-vals">
-                    <span class="idx-mover-ltp">₹{{ "{:,.1f}".format(s.ltp) }}</span>
+                    <span class="idx-mover-pts text-down">{{ s.pts_contribution }} pts</span>
                     <span class="pill down" style="font-size:.55rem">{{ s.change_pct }}%</span>
                 </div>
             </div>
             {% endfor %}
             {% else %}
-            <div style="font-size:.7rem;color:var(--text3);padding:10px">No losers today</div>
+            <div style="font-size:.7rem;color:var(--text3);padding:10px">No detractors today</div>
             {% endif %}
         </div>
     </div>
 </div>
 
-{# ═══ SECTOR BREAKDOWN ═══ #}
+{# ═══ SECTOR BREAKDOWN WITH DONUT ═══ #}
 {% if constituents.sector_breakdown %}
 <div class="idx-sector-breakdown">
     <div class="idx-movers-header">
-        <span><i class="bi bi-pie-chart-fill" style="color:var(--gold)"></i> Sector Breakdown</span>
-        <span class="ai-badge sm"><i class="bi bi-stars"></i> AI Analyzed</span>
+        <span><i class="bi bi-pie-chart-fill" style="color:var(--gold)"></i> Sector Weightage</span>
+        <span style="font-size:.6rem;color:var(--text3)">{{ constituents.total }} stocks</span>
     </div>
-    <div class="idx-sector-bars">
-        {% set max_count = constituents.sector_breakdown.values()|map(attribute='count')|max %}
-        {% for sector, info in constituents.sector_breakdown.items() %}
-        {% if info.count >= 2 or constituents.sector_breakdown|length <= 8 %}
-        <div class="idx-sector-row">
-            <div class="idx-sector-left">
-                <span class="idx-sector-name">{{ sector[:25] }}{% if sector|length > 25 %}…{% endif %}</span>
-                <span class="idx-sector-count">{{ info.count }} stock{{ 's' if info.count != 1 else '' }}</span>
-            </div>
-            <div class="idx-sector-bar-area">
-                <div class="idx-sector-bar {{ 'up' if info.avg_change >= 0 else 'down' }}" style="width:{{ (info.count / max_count * 100)|int }}%"></div>
-            </div>
-            <span class="pill {{ 'up' if info.avg_change >= 0 else 'down' }}" style="font-size:.55rem;min-width:50px;justify-content:center">
-                {{ "+" if info.avg_change >= 0 else "" }}{{ info.avg_change }}%
-            </span>
+    <div class="idx-sector-donut-wrap">
+        <div class="idx-sector-donut-left">
+            <canvas id="sectorDonut" width="180" height="180"></canvas>
         </div>
-        {% endif %}
-        {% endfor %}
+        <div class="idx-sector-legend">
+            {% set max_count = constituents.sector_breakdown.values()|map(attribute='count')|max %}
+            {% set donut_colors = ['#8b5cf6','#60a5fa','#00D09C','#f59e0b','#ef4444','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#a78bfa','#fb923c'] %}
+            {% for sector, info in constituents.sector_breakdown.items() %}
+            {% if info.count >= 2 or constituents.sector_breakdown|length <= 8 %}
+            <div class="idx-legend-item">
+                <span class="idx-legend-dot" style="background:{{ donut_colors[loop.index0 % donut_colors|length] }}"></span>
+                <span class="idx-legend-name">{{ sector[:22] }}{% if sector|length > 22 %}…{% endif %}</span>
+                <span class="idx-legend-count">{{ info.count }}</span>
+                <span class="pill {{ 'up' if info.avg_change >= 0 else 'down' }}" style="font-size:.5rem;padding:1px 6px">
+                    {{ "+" if info.avg_change >= 0 else "" }}{{ info.avg_change }}%
+                </span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
     </div>
 </div>
+<script>
+(function(){
+    const canvas = document.getElementById('sectorDonut');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const data = [
+        {% for sector, info in constituents.sector_breakdown.items() %}
+        {% if info.count >= 2 or constituents.sector_breakdown|length <= 8 %}
+        {{ info.count }},
+        {% endif %}
+        {% endfor %}
+    ];
+    const colors = ['#8b5cf6','#60a5fa','#00D09C','#f59e0b','#ef4444','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#a78bfa','#fb923c'];
+    const total = data.reduce((a,b) => a+b, 0);
+    const cx = 90, cy = 90, r = 72, inner = 44;
+    let start = -Math.PI / 2;
+
+    data.forEach((val, i) => {
+        const slice = (val / total) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, start, start + slice);
+        ctx.closePath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fill();
+        start += slice;
+    });
+
+    // Inner circle (donut hole)
+    ctx.beginPath();
+    ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-card').trim() || '#0f172a';
+    ctx.fill();
+
+    // Center text
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(total, cx, cy + 2);
+    ctx.font = '9px system-ui';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('stocks', cx, cy + 14);
+})();
+</script>
 {% endif %}
 {% endif %}
 
