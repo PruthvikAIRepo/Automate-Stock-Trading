@@ -146,7 +146,7 @@ def screener():
 
 @main_bp.route("/index/<token>")
 def index_detail(token):
-    from app.services.indices_service import fetch_all_indices
+    from app.services.indices_service import fetch_all_indices, fetch_52w_for_index
     from app.services.nse_data import is_market_hours
 
     idx_data = fetch_all_indices()
@@ -164,6 +164,13 @@ def index_detail(token):
 
     if not index_info:
         return "Index not found", 404
+
+    # Compute 52-week range from historical candles (Angel One returns 0 for indices)
+    if not index_info.get("high_52w") or not index_info.get("low_52w"):
+        w52 = fetch_52w_for_index(token, index_info.get("exchange", "NSE"))
+        if w52:
+            index_info["low_52w"] = w52["low"]
+            index_info["high_52w"] = w52["high"]
 
     # Get per-index breadth from NSE if available
     index_breadth = _get_index_breadth(index_info.get("name", ""))

@@ -186,6 +186,41 @@ def _format_index(token_info, quote=None, sparkline_html=""):
         }
 
 
+# ─── 52-WEEK RANGE FROM HISTORICAL DATA ─────────────────────────────────────
+
+def compute_52w_from_candles(candles):
+    """
+    Compute 52-week high/low from daily candle data.
+    Angel One returns 0 for 52WeekHigh/Low on index tokens (AMXIDX),
+    so we calculate from getCandleData instead.
+
+    candles: list of [DateTime, O, H, L, C, Volume] from Angel One
+    Returns: {"high": float, "low": float} or None
+    """
+    if not candles or len(candles) < 5:
+        return None
+
+    try:
+        highs = [float(c[2]) for c in candles if float(c[2]) > 0]
+        lows = [float(c[3]) for c in candles if float(c[3]) > 0]
+
+        if not highs or not lows:
+            return None
+
+        return {
+            "high": max(highs),
+            "low": min(lows),
+        }
+    except (IndexError, ValueError, TypeError):
+        return None
+
+
+def fetch_52w_for_index(token, exchange="NSE"):
+    """Fetch 52-week high/low for a single index by computing from 1-year daily candles."""
+    candles = fetch_index_history(token, exchange, "ONE_DAY", days=365)
+    return compute_52w_from_candles(candles)
+
+
 # ─── PUBLIC API ──────────────────────────────────────────────────────────────
 
 def fetch_all_indices():
@@ -289,12 +324,17 @@ def fetch_all_indices():
     # Ensure hero has NIFTY 50 first, then BANK NIFTY
     hero.sort(key=lambda x: 0 if "50" in x["name"] and "BANK" not in x["name"] else 1)
 
-    # Real sparklines for hero indices (2 API calls — fast & high-visibility)
+    # Real sparklines + 52W range for hero indices (365-day candles, 2 API calls)
     for h in hero:
         try:
-            candles = fetch_index_history(h["token"], h["exchange"], "ONE_DAY", days=15)
+            candles = fetch_index_history(h["token"], h["exchange"], "ONE_DAY", days=365)
             if candles and len(candles) >= 2:
                 h["sparkline"] = _sparkline_svg(candles)
+                # Compute 52W high/low from historical data (Angel One returns 0 for indices)
+                w52 = compute_52w_from_candles(candles)
+                if w52:
+                    h["low_52w"] = w52["low"]
+                    h["high_52w"] = w52["high"]
         except Exception:
             pass  # Keep existing dummy sparkline
 
