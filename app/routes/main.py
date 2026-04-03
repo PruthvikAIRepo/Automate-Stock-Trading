@@ -43,6 +43,7 @@ def indices():
     from app.services.indices_service import fetch_all_indices, get_market_context
     from app.services.global_markets import fetch_global_indices
     from app.services.nse_data import is_market_hours
+    from app.services.market_ai import generate_market_analysis
 
     idx_data = fetch_all_indices()
     market_ctx = get_market_context()
@@ -50,6 +51,13 @@ def indices():
 
     # Global markets (Yahoo Finance — returns None if unavailable)
     global_data = fetch_global_indices()
+
+    # AI Market Intelligence (OpenAI GPT-4.1 mini — cached 5 min)
+    ai = None
+    if idx_data.get("live"):
+        ai = generate_market_analysis(
+            idx_data, market_ctx["breadth"], market_ctx["fii_dii"], valuation
+        )
 
     return render_template(
         "indices.html",
@@ -60,7 +68,7 @@ def indices():
         globals=global_data,
         is_live=idx_data["live"],
         is_market_hours=is_market_hours(),
-        ai=None,
+        ai=ai,
         updated_at=datetime.now().strftime("%H:%M:%S"),
     )
 
@@ -147,7 +155,7 @@ def screener():
 @main_bp.route("/index/<token>")
 def index_detail(token):
     from app.services.indices_service import fetch_all_indices, fetch_52w_for_index
-    from app.services.nse_data import is_market_hours
+    from app.services.nse_data import is_market_hours, fetch_index_constituents
 
     idx_data = fetch_all_indices()
 
@@ -175,10 +183,16 @@ def index_detail(token):
     # Get per-index breadth from NSE if available
     index_breadth = _get_index_breadth(index_info.get("name", ""))
 
+    # Get constituent stocks (top movers + sector breakdown) — NSE indices only
+    constituents = None
+    if index_info.get("exchange") == "NSE":
+        constituents = fetch_index_constituents(index_info.get("name", ""))
+
     return render_template(
         "index_detail.html",
         index=index_info,
         breadth=index_breadth,
+        constituents=constituents,
         is_market_hours=is_market_hours(),
     )
 
@@ -274,3 +288,22 @@ def api_index_history():
             continue
 
     return jsonify({"candles": formatted})
+
+
+@main_bp.route("/api/sector-timeframes")
+def api_sector_timeframes():
+    """
+    JSON API for sector multi-timeframe returns.
+    Returns: {token: {"1W": float, "1M": float, "3M": float}, ...}
+    Fetched async from frontend so it doesn't block page load.
+    """
+    from app.services.indices_service import fetch_all_indices, fetch_sector_timeframe_returns
+
+    idx_data = fetch_all_indices()
+    sector_perf = idx_data.get("sector_performance", [])
+
+    if not sector_perf:
+        return jsonify({})
+
+    returns = fetch_sector_timeframe_returns(sector_perf)
+    return jsonify(returns)

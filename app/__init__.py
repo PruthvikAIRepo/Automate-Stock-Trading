@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from flask import Flask
+from flask_socketio import SocketIO
 
 load_dotenv()
 
@@ -13,6 +14,9 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 
+# Global SocketIO instance (accessible from other modules)
+socketio = SocketIO()
+
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
@@ -21,6 +25,9 @@ def create_app():
     # Ensure instance folder exists (for SQLite DB)
     os.makedirs(app.instance_path, exist_ok=True)
 
+    # Initialize SocketIO with the app
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="threading")
+
     # Initialize database
     from app.db import init_db
     init_db(app)
@@ -28,6 +35,9 @@ def create_app():
     # Register blueprint
     from app.routes.main import main_bp
     app.register_blueprint(main_bp)
+
+    # Register SocketIO events
+    _register_socket_events()
 
     # Context processor — indices for sidebar/ticker
     from app.dummy_data import ALL_INDICES
@@ -71,4 +81,29 @@ def create_app():
     from app.services.scheduler import init_scheduler
     init_scheduler(app)
 
+    # Start real-time WebSocket stream (market hours only)
+    try:
+        from app.services.realtime import init_realtime, start_stream
+        init_realtime(socketio)
+        start_stream()
+    except Exception as e:
+        logging.getLogger(__name__).warning("Real-time stream init failed: %s", e)
+
     return app
+
+
+def _register_socket_events():
+    """Register Socket.IO event handlers for the /live namespace."""
+    from app.services.realtime import get_latest_prices
+
+    @socketio.on("connect", namespace="/live")
+    def on_connect():
+        """Send latest cached prices when a client connects."""
+        prices = get_latest_prices()
+        if prices:
+            for token, tick in prices.items():
+                socketio.emit("tick", tick, namespace="/live")
+
+    @socketio.on("disconnect", namespace="/live")
+    def on_disconnect():
+        pass

@@ -305,6 +305,164 @@ def fetch_nifty_valuation():
         return None
 
 
+# ─── Index Constituents ──────────────────────────────────────────────────────
+
+# Angel One symbol → NSE index name for constituent lookup
+_CONSTITUENT_INDEX_MAP = {
+    "NIFTY":             "NIFTY 50",
+    "NIFTY 50":          "NIFTY 50",
+    "BANKNIFTY":         "NIFTY BANK",
+    "NIFTY BANK":        "NIFTY BANK",
+    "NIFTY NEXT 50":     "NIFTY NEXT 50",
+    "NIFTY IT":          "NIFTY IT",
+    "NIFTY FIN SERVICE": "NIFTY FINANCIAL SERVICES",
+    "NIFTY FMCG":        "NIFTY FMCG",
+    "NIFTY PHARMA":      "NIFTY PHARMA",
+    "NIFTY AUTO":        "NIFTY AUTO",
+    "NIFTY ENERGY":      "NIFTY ENERGY",
+    "NIFTY METAL":       "NIFTY METAL",
+    "NIFTY REALTY":      "NIFTY REALTY",
+    "NIFTY INFRA":       "NIFTY INFRASTRUCTURE",
+    "NIFTY PSU BANK":    "NIFTY PSU BANK",
+    "NIFTY PVT BANK":    "NIFTY PRIVATE BANK",
+    "NIFTY MEDIA":       "NIFTY MEDIA",
+    "NIFTY MID SELECT":  "NIFTY MIDCAP SELECT",
+    "NIFTY MIDCAP 50":   "NIFTY MIDCAP 50",
+    "NIFTY MIDCAP 100":  "NIFTY MIDCAP 100",
+    "NIFTY SMLCAP 50":   "NIFTY SMLCAP 50",
+    "NIFTY SMLCAP 100":  "NIFTY SMALLCAP 100",
+    "NIFTY SMLCAP 250":  "NIFTY SMALLCAP 250",
+    "NIFTY 100":         "NIFTY 100",
+    "NIFTY 200":         "NIFTY 200",
+    "NIFTY 500":         "NIFTY 500",
+    "NIFTY COMMODITIES": "NIFTY COMMODITIES",
+    "NIFTY CONSUMPTION": "NIFTY CONSUMPTION",
+    "NIFTY CPSE":        "NIFTY CPSE",
+    "NIFTY GROWSECT 15": "NIFTY GROWSECT 15",
+    "NIFTY SERV SECTOR": "NIFTY SERVICES SECTOR",
+    "NIFTY MNC":         "NIFTY MNC",
+    "NIFTY DIV OPPS 50": "NIFTY DIVIDEND OPPORTUNITIES 50",
+    "NIFTY100 QUALITY 30": "NIFTY100 QUALITY 30",
+    "NIFTY MIDCAP 150":  "NIFTY MIDCAP 150",
+    "NIFTY HEALTHCARE":  "NIFTY HEALTHCARE INDEX",
+    "NIFTY OIL AND GAS": "NIFTY OIL & GAS",
+}
+
+
+def fetch_index_constituents(angel_name):
+    """
+    Fetch constituent stocks of an NSE index.
+
+    Args:
+        angel_name: Index name as shown in Angel One (e.g., "NIFTY", "BANKNIFTY")
+
+    Returns:
+        dict with keys:
+            stocks: list of constituent dicts (symbol, name, sector, ltp, change, change_pct, ...)
+            top_gainers: top 5 by change_pct
+            top_losers: bottom 5 by change_pct
+            sector_breakdown: dict {sector: {count, avg_change, stocks}}
+            total: int
+        None if unavailable
+    """
+    nse_name = _CONSTITUENT_INDEX_MAP.get(angel_name.upper())
+    if not nse_name:
+        # Try direct lookup
+        nse_name = angel_name
+
+    cache_key = f"constituents_{nse_name}"
+    cached = _cached(cache_key, 120)  # 2-min cache
+    if cached:
+        return cached
+
+    import urllib.parse
+    path = f"/api/equity-stockIndices?index={urllib.parse.quote(nse_name)}"
+    data = _nse_get(path)
+
+    if not data or "data" not in data:
+        return None
+
+    try:
+        stocks = []
+        for item in data["data"]:
+            # First entry is often the index summary — skip it
+            symbol = item.get("symbol", "")
+            if not symbol or symbol == nse_name:
+                continue
+
+            # Skip if it looks like an index entry (no series)
+            if not item.get("series"):
+                continue
+
+            sector = ""
+            meta = item.get("meta", {})
+            if meta:
+                sector = meta.get("industry", "") or meta.get("sector", "")
+
+            stocks.append({
+                "symbol": symbol,
+                "name": meta.get("companyName", symbol) if meta else symbol,
+                "sector": sector,
+                "ltp": float(item.get("lastPrice", 0) or 0),
+                "change": float(item.get("change", 0) or 0),
+                "change_pct": float(item.get("pChange", 0) or 0),
+                "open": float(item.get("open", 0) or 0),
+                "high": float(item.get("dayHigh", 0) or 0),
+                "low": float(item.get("dayLow", 0) or 0),
+                "prev_close": float(item.get("previousClose", 0) or 0),
+                "volume": int(item.get("totalTradedVolume", 0) or 0),
+                "year_high": float(item.get("yearHigh", 0) or 0),
+                "year_low": float(item.get("yearLow", 0) or 0),
+            })
+
+        if not stocks:
+            return None
+
+        # Sort by change_pct for gainers/losers
+        sorted_by_change = sorted(stocks, key=lambda s: s["change_pct"], reverse=True)
+        top_gainers = [s for s in sorted_by_change if s["change_pct"] > 0][:5]
+        top_losers = [s for s in reversed(sorted_by_change) if s["change_pct"] < 0][:5]
+
+        # Sector breakdown
+        sector_map = {}
+        for s in stocks:
+            sec = s["sector"] or "Other"
+            if sec not in sector_map:
+                sector_map[sec] = {"count": 0, "total_change": 0, "stocks": []}
+            sector_map[sec]["count"] += 1
+            sector_map[sec]["total_change"] += s["change_pct"]
+            sector_map[sec]["stocks"].append(s["symbol"])
+
+        sector_breakdown = {}
+        for sec, info in sector_map.items():
+            sector_breakdown[sec] = {
+                "count": info["count"],
+                "avg_change": round(info["total_change"] / info["count"], 2),
+                "stocks": info["stocks"],
+            }
+
+        # Sort sectors by count (largest first)
+        sector_breakdown = dict(
+            sorted(sector_breakdown.items(), key=lambda x: x[1]["count"], reverse=True)
+        )
+
+        result = {
+            "stocks": stocks,
+            "top_gainers": top_gainers,
+            "top_losers": top_losers,
+            "sector_breakdown": sector_breakdown,
+            "total": len(stocks),
+        }
+
+        _set_cache(cache_key, result)
+        log.info("NSE constituents for %s: %d stocks", nse_name, len(stocks))
+        return result
+
+    except Exception as e:
+        log.error("Failed to parse NSE constituents for %s: %s", nse_name, e)
+        return None
+
+
 # ─── Utility ──────────────────────────────────────────────────────────────────
 
 def is_market_hours():

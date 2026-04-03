@@ -446,6 +446,9 @@
         .ai-intel-label{font-size:.65rem;font-weight:700;color:#c4b5fd;margin-bottom:6px;display:flex;align-items:center;gap:5px}
         .ai-intel-text{font-size:.75rem;color:var(--text2);line-height:1.6}
         .ai-intel-footer{padding:8px 18px 12px;font-size:.55rem;color:var(--text3);display:flex;align-items:center;gap:5px}
+        .ai-signal-strips{display:flex;flex-direction:column;gap:0;margin:0 14px 8px}
+        .ai-signal-strip{display:flex;align-items:center;gap:6px;font-size:.68rem;color:var(--text2);padding:8px 14px;background:rgba(30,41,59,.5);border-radius:8px;margin-bottom:4px;line-height:1.5}
+        .ai-signal-strip i{flex-shrink:0;font-size:.75rem}
         @media(max-width:640px){
             .ai-intel-grid{grid-template-columns:1fr}
         }
@@ -509,13 +512,48 @@
         .idx-meta-val{font-size:.75rem;font-weight:700}
         .idx-back-link{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:var(--accent);font-weight:600;margin-bottom:16px}
         .idx-back-link:hover{text-decoration:underline}
+        /* Top movers */
+        .idx-movers-section{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden}
+        .idx-movers-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font-size:.75rem;font-weight:700;border-bottom:1px solid var(--border)}
+        .idx-movers-grid{display:grid;grid-template-columns:1fr 1fr;min-height:0}
+        .idx-mover-card{padding:10px 14px}
+        .idx-mover-card:first-child{border-right:1px solid var(--border)}
+        .idx-mover-title{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;display:flex;align-items:center;gap:4px}
+        .idx-mover-title.up{color:var(--green)}
+        .idx-mover-title.down{color:var(--red)}
+        .idx-mover-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+        .idx-mover-row:last-child{border-bottom:none}
+        .idx-mover-sym{display:flex;flex-direction:column;min-width:0}
+        .idx-mover-symbol{font-size:.72rem;font-weight:700;color:var(--text)}
+        .idx-mover-name{font-size:.52rem;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+        .idx-mover-vals{display:flex;align-items:center;gap:6px;flex-shrink:0}
+        .idx-mover-ltp{font-size:.68rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text2)}
+        /* Sector breakdown */
+        .idx-sector-breakdown{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden}
+        .idx-sector-bars{padding:10px 14px}
+        .idx-sector-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)}
+        .idx-sector-row:last-child{border-bottom:none}
+        .idx-sector-left{min-width:130px;flex-shrink:0}
+        .idx-sector-name{font-size:.68rem;font-weight:600;display:block}
+        .idx-sector-count{font-size:.5rem;color:var(--text3)}
+        .idx-sector-bar-area{flex:1;height:6px;background:var(--bg-elevated);border-radius:3px;overflow:hidden}
+        .idx-sector-bar{height:100%;border-radius:3px;min-width:4px;transition:width .3s}
+        .idx-sector-bar.up{background:var(--green)}
+        .idx-sector-bar.down{background:var(--red)}
         @media(max-width:640px){
             .idx-chart-container{height:280px}
             .idx-detail-ltp{font-size:1.4rem}
             .idx-detail-grid{grid-template-columns:1fr}
+            .idx-movers-grid{grid-template-columns:1fr}
+            .idx-mover-card:first-child{border-right:none;border-bottom:1px solid var(--border)}
+            .idx-sector-left{min-width:100px}
         }
 
         /* Sector perf header */
+        .sec-tf-bar{display:flex;gap:3px}
+        .sec-tf{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 9px;font-size:.58rem;font-weight:700;color:var(--text3);cursor:pointer;transition:all .15s}
+        .sec-tf:hover{color:var(--text);border-color:var(--border-light)}
+        .sec-tf.active{background:var(--accent-bg);color:var(--accent);border-color:var(--accent)}
         .sector-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border)}
         .sector-title{font-size:.85rem;font-weight:700;display:flex;align-items:center;gap:6px}
         .sector-sub{font-size:.6rem;color:var(--text3);margin-top:2px}

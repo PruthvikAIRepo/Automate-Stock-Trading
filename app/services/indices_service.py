@@ -350,6 +350,82 @@ def fetch_all_indices():
     }
 
 
+def fetch_sector_timeframe_returns(sector_perf):
+    """
+    Compute 1W, 1M, 3M returns for each sectoral index.
+    Fetches 90-day daily candles per sector and extracts historical closes.
+    Cached for 10 minutes to avoid excessive API calls.
+
+    Args:
+        sector_perf: list of dicts with token, name, value (current LTP)
+
+    Returns:
+        dict {token: {"1W": float, "1M": float, "3M": float}}
+    """
+    import threading
+
+    cache_key = "sector_tf_returns"
+    cached = None
+    now = time.time()
+
+    # Simple module-level cache
+    if hasattr(fetch_sector_timeframe_returns, "_cache"):
+        c = fetch_sector_timeframe_returns._cache
+        if c and (now - c.get("ts", 0)) < 600:
+            cached = c.get("data")
+    if cached:
+        return cached
+
+    results = {}
+
+    for sec in sector_perf:
+        token = sec["token"]
+        current = sec["value"]
+        if current <= 0:
+            continue
+
+        try:
+            candles = fetch_index_history(token, "NSE", "ONE_DAY", days=90)
+            if not candles or len(candles) < 5:
+                continue
+
+            # candles: [DateTime, O, H, L, C, Vol] — most recent last
+            closes = [(c[0], float(c[4])) for c in candles if float(c[4]) > 0]
+            if len(closes) < 5:
+                continue
+
+            total = len(closes)
+            tf = {}
+
+            # 1W ≈ 5 trading days
+            if total >= 5:
+                old_close = closes[-5][1]
+                tf["1W"] = round((current - old_close) / old_close * 100, 2)
+
+            # 1M ≈ 22 trading days
+            if total >= 22:
+                old_close = closes[-22][1]
+                tf["1M"] = round((current - old_close) / old_close * 100, 2)
+
+            # 3M ≈ 66 trading days
+            if total >= 66:
+                old_close = closes[-66][1]
+                tf["3M"] = round((current - old_close) / old_close * 100, 2)
+
+            results[token] = tf
+
+        except Exception:
+            continue
+
+        # Respect rate limits (getCandleData: ~3 req/sec)
+        time.sleep(0.35)
+
+    # Cache results
+    fetch_sector_timeframe_returns._cache = {"data": results, "ts": now}
+    log.info("Sector timeframe returns: computed for %d/%d sectors", len(results), len(sector_perf))
+    return results
+
+
 def fetch_index_history(token, exchange="NSE", interval="ONE_DAY", days=365):
     """Fetch historical candle data for a specific index."""
     auth = get_angel_auth()

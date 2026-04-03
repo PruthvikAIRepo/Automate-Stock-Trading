@@ -132,10 +132,94 @@
             {% endif %}
             <div class="idx-meta-item"><span class="idx-meta-label">Exchange</span><span class="idx-meta-val">{{ index.exchange }}</span></div>
             <div class="idx-meta-item"><span class="idx-meta-label">Category</span><span class="idx-meta-val" style="text-transform:capitalize">{{ index.category|replace('_',' ') }}</span></div>
-            <div class="idx-meta-item"><span class="idx-meta-label">Token</span><span class="idx-meta-val" style="font-size:.65rem;color:var(--text3)">{{ index.token }}</span></div>
+            {% if constituents %}
+            <div class="idx-meta-item"><span class="idx-meta-label">Constituents</span><span class="idx-meta-val">{{ constituents.total }} stocks</span></div>
+            {% endif %}
         </div>
     </div>
 </div>
+
+{# ═══ TOP MOVERS ═══ #}
+{% if constituents %}
+<div class="idx-movers-section">
+    <div class="idx-movers-header">
+        <span><i class="bi bi-arrow-up-right" style="color:var(--green)"></i> Top Movers in {{ index.name }}</span>
+        <span style="font-size:.6rem;color:var(--text3)">{{ constituents.total }} stocks · NSE Live</span>
+    </div>
+    <div class="idx-movers-grid">
+        {# Top Gainers #}
+        <div class="idx-mover-card">
+            <div class="idx-mover-title up"><i class="bi bi-graph-up-arrow"></i> Top Gainers</div>
+            {% if constituents.top_gainers %}
+            {% for s in constituents.top_gainers %}
+            <div class="idx-mover-row">
+                <div class="idx-mover-sym">
+                    <span class="idx-mover-symbol">{{ s.symbol }}</span>
+                    <span class="idx-mover-name">{{ s.name[:30] }}{% if s.name|length > 30 %}…{% endif %}</span>
+                </div>
+                <div class="idx-mover-vals">
+                    <span class="idx-mover-ltp">₹{{ "{:,.1f}".format(s.ltp) }}</span>
+                    <span class="pill up" style="font-size:.55rem">+{{ s.change_pct }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="font-size:.7rem;color:var(--text3);padding:10px">No gainers today</div>
+            {% endif %}
+        </div>
+
+        {# Top Losers #}
+        <div class="idx-mover-card">
+            <div class="idx-mover-title down"><i class="bi bi-graph-down-arrow"></i> Top Losers</div>
+            {% if constituents.top_losers %}
+            {% for s in constituents.top_losers %}
+            <div class="idx-mover-row">
+                <div class="idx-mover-sym">
+                    <span class="idx-mover-symbol">{{ s.symbol }}</span>
+                    <span class="idx-mover-name">{{ s.name[:30] }}{% if s.name|length > 30 %}…{% endif %}</span>
+                </div>
+                <div class="idx-mover-vals">
+                    <span class="idx-mover-ltp">₹{{ "{:,.1f}".format(s.ltp) }}</span>
+                    <span class="pill down" style="font-size:.55rem">{{ s.change_pct }}%</span>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="font-size:.7rem;color:var(--text3);padding:10px">No losers today</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ═══ SECTOR BREAKDOWN ═══ #}
+{% if constituents.sector_breakdown %}
+<div class="idx-sector-breakdown">
+    <div class="idx-movers-header">
+        <span><i class="bi bi-pie-chart-fill" style="color:var(--gold)"></i> Sector Breakdown</span>
+        <span class="ai-badge sm"><i class="bi bi-stars"></i> AI Analyzed</span>
+    </div>
+    <div class="idx-sector-bars">
+        {% set max_count = constituents.sector_breakdown.values()|map(attribute='count')|max %}
+        {% for sector, info in constituents.sector_breakdown.items() %}
+        {% if info.count >= 2 or constituents.sector_breakdown|length <= 8 %}
+        <div class="idx-sector-row">
+            <div class="idx-sector-left">
+                <span class="idx-sector-name">{{ sector[:25] }}{% if sector|length > 25 %}…{% endif %}</span>
+                <span class="idx-sector-count">{{ info.count }} stock{{ 's' if info.count != 1 else '' }}</span>
+            </div>
+            <div class="idx-sector-bar-area">
+                <div class="idx-sector-bar {{ 'up' if info.avg_change >= 0 else 'down' }}" style="width:{{ (info.count / max_count * 100)|int }}%"></div>
+            </div>
+            <span class="pill {{ 'up' if info.avg_change >= 0 else 'down' }}" style="font-size:.55rem;min-width:50px;justify-content:center">
+                {{ "+" if info.avg_change >= 0 else "" }}{{ info.avg_change }}%
+            </span>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endif %}
 
 <a href="/indices" class="idx-back-link"><i class="bi bi-arrow-left"></i> Back to All Indices</a>
 
