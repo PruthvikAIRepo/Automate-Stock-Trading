@@ -239,6 +239,40 @@
     </div>
     {% endif %}
 
+    {# SIP Traffic Light + Lumpsum Signal #}
+    {% if sip_signal %}
+    <div class="invest-signals">
+        <div class="invest-signal-card sip {{ sip_signal.sip.color }}">
+            <div class="invest-signal-header">
+                <i class="bi bi-arrow-repeat" style="font-size:.7rem"></i>
+                <span>Monthly SIP</span>
+            </div>
+            <div class="invest-signal-action">
+                <i class="bi {{ sip_signal.sip.icon }}"></i>
+                {{ sip_signal.sip.action }}
+            </div>
+            <div class="invest-signal-reason">{{ sip_signal.sip.reason }}</div>
+        </div>
+        <div class="invest-signal-card lumpsum {{ sip_signal.lumpsum.color }}">
+            <div class="invest-signal-header">
+                <i class="bi bi-cash-stack" style="font-size:.7rem"></i>
+                <span>Lumpsum Investment</span>
+            </div>
+            <div class="invest-signal-action">
+                <i class="bi {{ sip_signal.lumpsum.icon }}"></i>
+                {{ sip_signal.lumpsum.action }}
+            </div>
+            <div class="invest-signal-reason">{{ sip_signal.lumpsum.reason }}</div>
+        </div>
+    </div>
+    {% if sip_signal.drawdown_pct < -5 %}
+    <div class="invest-crash-alert">
+        <i class="bi bi-exclamation-diamond-fill" style="color:var(--gold)"></i>
+        Market is <strong>{{ sip_signal.drawdown_pct }}%</strong> below 52-week high — corrections like this have historically been good entry points for long-term investors.
+    </div>
+    {% endif %}
+    {% endif %}
+
     <div class="ai-verdict-box">
         <i class="bi bi-stars" style="color:#a78bfa"></i>
         <strong>AI Verdict:</strong>

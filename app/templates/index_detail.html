@@ -166,6 +166,80 @@
     </div>
 </div>
 
+{# ═══ PIVOT LEVELS ═══ #}
+{% if pivots %}
+<div class="pivot-card">
+    <div class="pivot-header">
+        <span><i class="bi bi-rulers" style="color:var(--accent)"></i> Pivot Levels</span>
+        <span class="pivot-tag">Classic · Prev Day OHLC</span>
+    </div>
+    <div class="pivot-body">
+        {% set ltp = index.value %}
+        {% set levels = [
+            ('R3', pivots.R3, 'res'),
+            ('R2', pivots.R2, 'res'),
+            ('R1', pivots.R1, 'res'),
+            ('P', pivots.P, 'pivot'),
+            ('S1', pivots.S1, 'sup'),
+            ('S2', pivots.S2, 'sup'),
+            ('S3', pivots.S3, 'sup'),
+        ] %}
+        <div class="pivot-table">
+            {% for label, val, kind in levels %}
+            {% set next_val = levels[loop.index][1] if loop.index < levels|length else 0 %}
+            {% set is_zone = (loop.index < levels|length and ltp <= val and ltp > next_val) %}
+            {% if is_zone %}
+            <div class="pivot-ltp-row">
+                <span class="pivot-label" style="color:var(--accent)">LTP</span>
+                <span class="pivot-ltp-indicator">
+                    <span class="pivot-ltp-dot-inline"></span>
+                    {{ "{:,.2f}".format(ltp) }}
+                </span>
+                <span class="pivot-dist {{ 'text-up' if ltp >= pivots.P else 'text-down' }}">
+                    {{ "+" if ltp >= val else "" }}{{ "{:,.1f}".format(ltp - val) }} from {{ label }}
+                </span>
+            </div>
+            {% endif %}
+            <div class="pivot-row {{ kind }}">
+                <span class="pivot-label">{{ label }}</span>
+                <span class="pivot-val">{{ "{:,.1f}".format(val) }}</span>
+                <span class="pivot-dist {{ 'text-up' if ltp > val else 'text-down' if ltp < val else '' }}">
+                    {% if ltp != val %}{{ "{:+,.1f}".format(ltp - val) }}{% else %}At level{% endif %}
+                </span>
+            </div>
+            {% endfor %}
+            {# If LTP is below S3, show it at the bottom #}
+            {% if ltp <= pivots.S3 %}
+            <div class="pivot-ltp-row">
+                <span class="pivot-label" style="color:var(--accent)">LTP</span>
+                <span class="pivot-ltp-indicator">
+                    <span class="pivot-ltp-dot-inline"></span>
+                    {{ "{:,.2f}".format(ltp) }}
+                </span>
+                <span class="pivot-dist text-down">{{ "{:,.1f}".format(ltp - pivots.S3) }} from S3</span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="pivot-signal">
+            <i class="bi bi-crosshair" style="color:var(--accent)"></i>
+            {% if ltp > pivots.R2 %}
+                Strong bullish — above R2, next target R3 ({{ "{:,.0f}".format(pivots.R3) }})
+            {% elif ltp > pivots.R1 %}
+                Bullish — above R1, resistance at R2 ({{ "{:,.0f}".format(pivots.R2) }})
+            {% elif ltp > pivots.P %}
+                Mild bullish — above pivot, watch R1 ({{ "{:,.0f}".format(pivots.R1) }})
+            {% elif ltp > pivots.S1 %}
+                Neutral to bearish — below pivot, support at S1 ({{ "{:,.0f}".format(pivots.S1) }})
+            {% elif ltp > pivots.S2 %}
+                Bearish — below S1, support at S2 ({{ "{:,.0f}".format(pivots.S2) }})
+            {% else %}
+                Strong bearish — below S2, deep support at S3 ({{ "{:,.0f}".format(pivots.S3) }})
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {# ═══ RETURN ATTRIBUTION ═══ #}
 {% if constituents %}
 <div class="idx-movers-section">

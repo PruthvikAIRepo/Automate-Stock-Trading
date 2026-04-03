@@ -467,6 +467,52 @@ def fetch_index_history(token, exchange="NSE", interval="ONE_DAY", days=365):
     return candles if candles else []
 
 
+# ─── PIVOT LEVELS ─────────────────────────────────────────────────────────────
+
+def compute_pivot_levels(token, exchange="NSE"):
+    """
+    Calculate classic pivot points from the previous trading day's OHLC.
+
+    Returns dict with P, R1, R2, R3, S1, S2, S3 or None if data unavailable.
+    Formula (Classic/Floor Pivots — used by 90% of F&O traders):
+        P  = (prevH + prevL + prevC) / 3
+        R1 = 2*P - prevL          S1 = 2*P - prevH
+        R2 = P + (prevH - prevL)  S2 = P - (prevH - prevL)
+        R3 = prevH + 2*(P-prevL)  S3 = prevL - 2*(prevH - P)
+    """
+    try:
+        candles = fetch_index_history(token, exchange, "ONE_DAY", days=5)
+        if not candles or len(candles) < 2:
+            return None
+
+        # Last candle may be today's incomplete candle — use second-to-last
+        prev = candles[-2]
+        h = float(prev[2])  # High
+        l = float(prev[3])  # Low
+        c = float(prev[4])  # Close
+
+        if h == 0 or l == 0 or c == 0:
+            return None
+
+        p = (h + l + c) / 3
+        r1 = 2 * p - l
+        r2 = p + (h - l)
+        r3 = h + 2 * (p - l)
+        s1 = 2 * p - h
+        s2 = p - (h - l)
+        s3 = l - 2 * (h - p)
+
+        return {
+            "P": round(p, 2),
+            "R1": round(r1, 2), "R2": round(r2, 2), "R3": round(r3, 2),
+            "S1": round(s1, 2), "S2": round(s2, 2), "S3": round(s3, 2),
+            "prev_high": round(h, 2), "prev_low": round(l, 2), "prev_close": round(c, 2),
+        }
+    except Exception as e:
+        log.error("Pivot calculation failed for %s: %s", token, e)
+        return None
+
+
 # ─── FALLBACK ────────────────────────────────────────────────────────────────
 
 def _fallback_indices():

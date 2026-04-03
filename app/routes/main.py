@@ -70,6 +70,11 @@ def indices():
             idx_data, market_ctx["breadth"], market_ctx["fii_dii"], valuation
         )
 
+    # SIP & Lumpsum signals — based on PE, VIX, drawdown from 52W high
+    sip_signal = _compute_investment_signals(
+        valuation, idx_data.get("vix"), idx_data.get("hero", [])
+    )
+
     return render_template(
         "indices.html",
         idx=idx_data,
@@ -80,6 +85,7 @@ def indices():
         is_live=idx_data["live"],
         is_market_hours=is_market_hours(),
         ai=ai,
+        sip_signal=sip_signal,
         updated_at=datetime.now().strftime("%H:%M:%S"),
     )
 
@@ -165,7 +171,7 @@ def screener():
 
 @main_bp.route("/index/<token>")
 def index_detail(token):
-    from app.services.indices_service import fetch_all_indices, fetch_52w_for_index
+    from app.services.indices_service import fetch_all_indices, fetch_52w_for_index, compute_pivot_levels
     from app.services.nse_data import is_market_hours, fetch_index_constituents
 
     idx_data = fetch_all_indices()
@@ -199,6 +205,9 @@ def index_detail(token):
     if index_info.get("exchange") == "NSE":
         constituents = fetch_index_constituents(index_info.get("name", ""))
 
+    # Pivot levels — from previous day's OHLC (1 API call for 5-day candles)
+    pivots = compute_pivot_levels(token, index_info.get("exchange", "NSE"))
+
     # AI narrative — explains what moved this index
     ai_narrative = None
     if constituents:
@@ -218,6 +227,7 @@ def index_detail(token):
         breadth=index_breadth,
         constituents=constituents,
         ai_narrative=ai_narrative,
+        pivots=pivots,
         is_market_hours=is_market_hours(),
         compare_list=compare_list,
     )
@@ -264,6 +274,73 @@ def _get_index_breadth(index_name):
     except Exception:
         pass
     return None
+
+
+# ─── SIP & LUMPSUM SIGNALS ─────────────────────────────────────────────────
+
+def _compute_investment_signals(valuation, vix_data, hero):
+    """
+    Compute SIP traffic light and lumpsum signal from PE, VIX, drawdown.
+
+    SIP signal: based on PE zone
+    Lumpsum signal: based on PE + VIX + drawdown from 52W high
+    """
+    pe = valuation.get("pe", 0) if valuation else 0
+    vix = vix_data.get("value", 15) if vix_data else 15
+
+    # Drawdown from 52W high (NIFTY 50)
+    drawdown_pct = 0
+    nifty = hero[0] if hero else {}
+    if nifty.get("high_52w") and nifty.get("value"):
+        drawdown_pct = round(
+            (nifty["value"] - nifty["high_52w"]) / nifty["high_52w"] * 100, 1
+        )
+
+    if not pe:
+        return None
+
+    # SIP Traffic Light
+    if pe < 18:
+        sip = {"action": "Increase SIP", "color": "green", "icon": "bi-arrow-up-circle-fill",
+               "reason": "Market is cheap — historically gives 15%+ returns over 12 months"}
+    elif pe < 22:
+        sip = {"action": "Continue SIP", "color": "amber", "icon": "bi-check-circle-fill",
+               "reason": "Market is fairly valued — your SIP is working perfectly, stay the course"}
+    elif pe < 25:
+        sip = {"action": "Continue SIP", "color": "orange", "icon": "bi-exclamation-circle-fill",
+               "reason": "Market getting expensive — don't stop SIP but avoid adding extra"}
+    else:
+        sip = {"action": "Reduce SIP", "color": "red", "icon": "bi-dash-circle-fill",
+               "reason": "Market is expensive — consider reducing allocation, keep cash for corrections"}
+
+    # Lumpsum Signal — more nuanced using PE + VIX + drawdown
+    if drawdown_pct < -10:
+        # Market crashed 10%+ from 52W high — opportunity
+        lumpsum = {"action": "Deploy Lumpsum", "color": "green", "icon": "bi-rocket-takeoff-fill",
+                   "reason": f"Market is {drawdown_pct}% below 52W high — correction creates opportunity for lumpsum"}
+    elif pe < 18 and vix < 18:
+        lumpsum = {"action": "Deploy Now", "color": "green", "icon": "bi-check-all",
+                   "reason": "Cheap valuation + low fear — ideal entry for lumpsum"}
+    elif pe < 18 and vix >= 18:
+        lumpsum = {"action": "Deploy in Tranches", "color": "green", "icon": "bi-calendar-week",
+                   "reason": "Cheap but volatile — split lumpsum into 3-4 weekly tranches"}
+    elif pe < 22:
+        lumpsum = {"action": "Wait for Dip", "color": "amber", "icon": "bi-hourglass-split",
+                   "reason": "Fair value — keep cash ready, deploy on 3-5% correction from here"}
+    elif pe < 25:
+        lumpsum = {"action": "Avoid Lumpsum", "color": "orange", "icon": "bi-exclamation-triangle-fill",
+                   "reason": "Getting expensive — park in liquid fund, wait for better entry"}
+    else:
+        lumpsum = {"action": "Strongly Avoid", "color": "red", "icon": "bi-x-circle-fill",
+                   "reason": "Expensive market — high risk of drawdown, keep cash for correction"}
+
+    return {
+        "sip": sip,
+        "lumpsum": lumpsum,
+        "pe": round(pe, 2),
+        "vix": round(vix, 1),
+        "drawdown_pct": drawdown_pct,
+    }
 
 
 # ─── CHART DATA API ─────────────────────────────────────────────────────────
