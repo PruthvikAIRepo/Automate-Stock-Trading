@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, jsonify
 from app.dummy_data import (
     get_all_sectors, get_sector_detail, get_all_stocks_flat, get_stock_by_symbol,
     get_top_gainers, get_top_losers, get_most_active, get_52w_high, get_52w_low,
@@ -140,3 +140,130 @@ def screener():
         presets=SCREENER_PRESETS, filters=filters, results=results,
         total_stocks=total_stocks,
     )
+
+
+# ─── INDEX DETAIL PAGE ─────────────────────────────────────────────────────
+
+@main_bp.route("/index/<token>")
+def index_detail(token):
+    from app.services.indices_service import fetch_all_indices
+    from app.services.nse_data import is_market_hours
+
+    idx_data = fetch_all_indices()
+
+    # Find this index in the table
+    index_info = None
+    for idx in idx_data.get("all_table", []):
+        if idx["token"] == token:
+            index_info = idx
+            break
+
+    # Also check VIX
+    if not index_info and idx_data.get("vix") and idx_data["vix"].get("token") == token:
+        index_info = idx_data["vix"]
+
+    if not index_info:
+        return "Index not found", 404
+
+    # Get per-index breadth from NSE if available
+    index_breadth = _get_index_breadth(index_info.get("name", ""))
+
+    return render_template(
+        "index_detail.html",
+        index=index_info,
+        breadth=index_breadth,
+        is_market_hours=is_market_hours(),
+    )
+
+
+# Angel One symbol → NSE index name mapping for breadth lookup
+_NSE_NAME_MAP = {
+    "NIFTY": "NIFTY 50",
+    "BANKNIFTY": "NIFTY BANK",
+    "NIFTY NEXT 50": "NIFTY NEXT 50",
+    "NIFTY FIN SERVICE": "NIFTY FINANCIAL SERVICES",
+    "NIFTY MID SELECT": "NIFTY MIDCAP SELECT",
+}
+
+
+def _get_index_breadth(index_name):
+    """Get advance/decline for a specific index from NSE allIndices data."""
+    try:
+        from app.services.nse_data import _fetch_all_indices
+        data = _fetch_all_indices()
+        if not data:
+            return None
+
+        # Try direct match, then mapped name
+        nse_name = _NSE_NAME_MAP.get(index_name.upper(), index_name).upper()
+
+        for item in data.get("data", []):
+            item_name = str(item.get("index", "")).upper()
+            if item_name == nse_name or item_name == index_name.upper():
+                adv = int(item.get("advances", 0) or 0)
+                dec = int(item.get("declines", 0) or 0)
+                unch = int(item.get("unchanged", 0) or 0)
+                total = adv + dec + unch
+                if total == 0:
+                    return None
+                return {
+                    "advances": adv,
+                    "declines": dec,
+                    "unchanged": unch,
+                    "total": total,
+                    "adv_pct": round(adv / total * 100, 1),
+                    "dec_pct": round(dec / total * 100, 1),
+                }
+    except Exception:
+        pass
+    return None
+
+
+# ─── CHART DATA API ─────────────────────────────────────────────────────────
+
+# Angel One interval mapping: key → (interval_code, max_days)
+_INTERVAL_MAP = {
+    "1D":  ("ONE_MINUTE",    1),
+    "1W":  ("FIVE_MINUTE",   7),
+    "1M":  ("FIFTEEN_MINUTE", 30),
+    "3M":  ("ONE_HOUR",      90),
+    "6M":  ("ONE_DAY",       180),
+    "1Y":  ("ONE_DAY",       365),
+    "5Y":  ("ONE_DAY",       1825),
+}
+
+
+@main_bp.route("/api/index-history")
+def api_index_history():
+    """
+    JSON API for chart data.
+    Params: token, exchange (default NSE), tf (1D/1W/1M/3M/6M/1Y/5Y)
+    Returns: {candles: [[timestamp_ms, open, high, low, close], ...]}
+    """
+    from app.services.indices_service import fetch_index_history
+
+    token = request.args.get("token", "")
+    exchange = request.args.get("exchange", "NSE")
+    tf = request.args.get("tf", "1M")
+
+    if not token:
+        return jsonify({"error": "token required"}), 400
+
+    interval_code, days = _INTERVAL_MAP.get(tf, ("ONE_DAY", 30))
+    candles = fetch_index_history(token, exchange, interval_code, days)
+
+    if not candles:
+        return jsonify({"candles": []})
+
+    # Format: [[timestamp_ms, O, H, L, C], ...]
+    # Angel One returns: [DateTime, O, H, L, C, Volume]
+    formatted = []
+    for c in candles:
+        try:
+            from datetime import datetime
+            ts = int(datetime.strptime(c[0], "%Y-%m-%dT%H:%M:%S%z").timestamp())
+            formatted.append([ts, c[1], c[2], c[3], c[4]])
+        except (ValueError, IndexError):
+            continue
+
+    return jsonify({"candles": formatted})

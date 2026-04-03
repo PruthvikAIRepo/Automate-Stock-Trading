@@ -153,7 +153,7 @@
 {% if idx.hero %}
 <div class="hero-grid">
     {% for h in idx.hero[:2] %}
-    <div class="hero-card {{ 'up' if h.change >= 0 else 'down' }}">
+    <a href="/index/{{ h.token }}" class="hero-card {{ 'up' if h.change >= 0 else 'down' }}" style="text-decoration:none;color:inherit;cursor:pointer">
         <div class="hero-nm">
             <span class="idx-ex nse">{{ h.exchange }}</span>
             {{ h.name }}
@@ -162,6 +162,7 @@
             {% else %}
                 <span class="hero-desc">— Top 12 banks</span>
             {% endif %}
+            <i class="bi bi-chevron-right" style="margin-left:auto;font-size:.6rem;color:var(--text3)"></i>
         </div>
         <div class="hero-val">{{ "{:,.2f}".format(h.value) }}</div>
         <div class="hero-chg {{ 'text-up' if h.change >= 0 else 'text-down' }}">
@@ -171,11 +172,25 @@
         </div>
         <div class="hero-stats">
             <div class="hero-stat">Open <span>{{ "{:,.0f}".format(h.open) }}</span></div>
-            <div class="hero-stat">Day High <span>{{ "{:,.0f}".format(h.high) }}</span></div>
-            <div class="hero-stat">Day Low <span>{{ "{:,.0f}".format(h.low) }}</span></div>
+            <div class="hero-stat">High <span>{{ "{:,.0f}".format(h.high) }}</span></div>
+            <div class="hero-stat">Low <span>{{ "{:,.0f}".format(h.low) }}</span></div>
+            {% if h.volume %}<div class="hero-stat">Vol <span>{{ "{:,.0f}".format(h.volume) }}</span></div>{% endif %}
         </div>
+        {% if h.high_52w and h.low_52w and h.high_52w != h.low_52w %}
+        <div class="hero-52w">
+            {% set w52s = h.high_52w - h.low_52w %}
+            {% set w52p = ((h.value - h.low_52w) / w52s * 100) %}
+            <span class="hero-52w-label">52W</span>
+            <span class="hero-52w-lo">{{ "{:,.0f}".format(h.low_52w) }}</span>
+            <div class="hero-52w-track">
+                <div class="hero-52w-fill" style="width:{{ [([w52p, 1]|max), 99]|min }}%"></div>
+                <div class="hero-52w-dot" style="left:{{ [([w52p, 1]|max), 99]|min }}%"></div>
+            </div>
+            <span class="hero-52w-hi">{{ "{:,.0f}".format(h.high_52w) }}</span>
+        </div>
+        {% endif %}
         {% if h.sparkline %}<div class="hero-spark">{{ h.sparkline|safe }}</div>{% endif %}
-    </div>
+    </a>
     {% endfor %}
 </div>
 {% endif %}
@@ -354,7 +369,8 @@
             </thead>
             <tbody id="idxBody">
                 {% for i in idx.all_table %}
-                <tr class="idx-row"
+                <tr class="idx-row clickable"
+                    data-token="{{ i.token }}"
                     data-exchange="{{ i.exchange|lower }}"
                     data-popular="{{ '1' if i.is_popular else '0' }}"
                     data-niche="{{ '1' if i.is_niche else '0' }}"
@@ -485,6 +501,14 @@ function sortTable(colIdx, type) {
         if (i === colIdx) th.classList.add('sort-' + dir);
     });
 }
+
+// ── Row click → detail page ──
+document.querySelectorAll('.idx-row.clickable').forEach(row => {
+    row.addEventListener('click', () => {
+        const token = row.dataset.token;
+        if (token) window.location.href = '/index/' + token;
+    });
+});
 
 // ── Initial state: show "Popular" tab ──
 applyFilters();

@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block title %}{{ index.name }} — StockPulse{% endblock %}
+{% block content %}
+<div class="bc">
+    <a href="/">Home</a><span class="sep">/</span>
+    <a href="/indices">Indices</a><span class="sep">/</span>
+    <span>{{ index.name }}</span>
+</div>
+
+{# ═══ HEADER ═══ #}
+<div class="idx-detail-header">
+    <div>
+        <div class="idx-detail-name">
+            <span class="idx-ex-pill {{ index.exchange|lower }}">{{ index.exchange }}</span>
+            {{ index.name }}
+        </div>
+        <div class="idx-detail-price">
+            <span class="idx-detail-ltp">{{ "{:,.2f}".format(index.value) }}</span>
+            <span class="idx-detail-chg {{ 'text-up' if index.change >= 0 else 'text-down' }}">
+                <i class="bi {{ 'bi-caret-up-fill' if index.change >= 0 else 'bi-caret-down-fill' }}" style="font-size:.7rem"></i>
+                {{ "+" if index.change >= 0 else "" }}{{ "{:,.2f}".format(index.change) }}
+                ({{ "+" if index.change_pct >= 0 else "" }}{{ index.change_pct }}%)
+            </span>
+        </div>
+    </div>
+    <div class="live-badge on" style="font-size:.55rem;padding:3px 10px">
+        {% if is_market_hours %}<span class="status-dot" style="width:5px;height:5px"></span> LIVE{% else %}<i class="bi bi-clock"></i> CLOSED{% endif %}
+    </div>
+</div>
+
+{# ═══ CHART ═══ #}
+<div class="idx-chart-card">
+    <div class="idx-tf-bar">
+        <button class="idx-tf active" data-tf="1D">1D</button>
+        <button class="idx-tf" data-tf="1W">1W</button>
+        <button class="idx-tf" data-tf="1M">1M</button>
+        <button class="idx-tf" data-tf="3M">3M</button>
+        <button class="idx-tf" data-tf="6M">6M</button>
+        <button class="idx-tf" data-tf="1Y">1Y</button>
+        <button class="idx-tf" data-tf="5Y">5Y</button>
+    </div>
+    <div id="chart" class="idx-chart-container"></div>
+    <div id="chartLoading" class="idx-chart-loading">
+        <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i> Loading chart...
+    </div>
+</div>
+
+{# ═══ DATA CARDS ═══ #}
+<div class="idx-detail-grid">
+    {# OHLC #}
+    <div class="idx-data-card">
+        <div class="idx-data-title">Today's Range</div>
+        <div class="idx-range-bar-wrap">
+            {% set range_span = index.high - index.low if index.high != index.low else 1 %}
+            {% set ltp_pos = ((index.value - index.low) / range_span * 100) %}
+            <div class="idx-range-labels">
+                <span>{{ "{:,.2f}".format(index.low) }}</span>
+                <span>{{ "{:,.2f}".format(index.high) }}</span>
+            </div>
+            <div class="idx-range-track">
+                <div class="idx-range-fill" style="width:{{ [([ltp_pos, 1]|max), 99]|min }}%"></div>
+                <div class="idx-range-dot" style="left:{{ [([ltp_pos, 1]|max), 99]|min }}%"></div>
+            </div>
+        </div>
+        <div class="idx-ohlc-grid">
+            <div class="idx-ohlc-item"><span class="idx-ohlc-label">Open</span><span class="idx-ohlc-val">{{ "{:,.2f}".format(index.open) }}</span></div>
+            <div class="idx-ohlc-item"><span class="idx-ohlc-label">High</span><span class="idx-ohlc-val text-up">{{ "{:,.2f}".format(index.high) }}</span></div>
+            <div class="idx-ohlc-item"><span class="idx-ohlc-label">Low</span><span class="idx-ohlc-val text-down">{{ "{:,.2f}".format(index.low) }}</span></div>
+            <div class="idx-ohlc-item"><span class="idx-ohlc-label">Prev Close</span><span class="idx-ohlc-val">{{ "{:,.2f}".format(index.close) }}</span></div>
+        </div>
+    </div>
+
+    {# 52-Week Range #}
+    <div class="idx-data-card">
+        <div class="idx-data-title">52-Week Range</div>
+        {% if index.low_52w and index.high_52w and index.high_52w != index.low_52w %}
+        {% set w52_span = index.high_52w - index.low_52w %}
+        {% set w52_pos = ((index.value - index.low_52w) / w52_span * 100) %}
+        <div class="idx-range-bar-wrap">
+            <div class="idx-range-labels">
+                <span>{{ "{:,.0f}".format(index.low_52w) }}</span>
+                <span>{{ "{:,.0f}".format(index.high_52w) }}</span>
+            </div>
+            <div class="idx-range-track w52">
+                <div class="idx-range-fill w52" style="width:{{ [([w52_pos, 1]|max), 99]|min }}%"></div>
+                <div class="idx-range-dot" style="left:{{ [([w52_pos, 1]|max), 99]|min }}%"></div>
+            </div>
+        </div>
+        <div class="idx-w52-pct">
+            <span class="{{ 'text-up' if index.value > index.low_52w else 'text-down' }}">
+                {{ "%.1f"|format(((index.value - index.low_52w) / index.low_52w) * 100) }}% from 52W Low
+            </span>
+            <span class="{{ 'text-down' if index.value < index.high_52w else 'text-up' }}">
+                {{ "%.1f"|format(((index.value - index.high_52w) / index.high_52w) * 100) }}% from 52W High
+            </span>
+        </div>
+        {% else %}
+        <div style="color:var(--text3);font-size:.75rem;padding:12px 0">52-week data not available</div>
+        {% endif %}
+    </div>
+
+    {# Breadth (if available) #}
+    {% if breadth %}
+    <div class="idx-data-card">
+        <div class="idx-data-title">Constituents Today</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin:8px 0">
+            <span style="color:var(--green);font-weight:800;font-size:1.3rem">{{ breadth.advances }}</span>
+            <span style="font-size:.6rem;color:var(--text3)">up</span>
+            <span style="color:var(--red);font-weight:800;font-size:1.3rem">{{ breadth.declines }}</span>
+            <span style="font-size:.6rem;color:var(--text3)">down</span>
+            {% if breadth.unchanged %}
+            <span style="color:var(--text3);font-weight:700;font-size:.9rem">{{ breadth.unchanged }}</span>
+            <span style="font-size:.6rem;color:var(--text3)">flat</span>
+            {% endif %}
+        </div>
+        <div class="breadth-bar">
+            <div class="adv" style="width:{{ breadth.adv_pct }}%"></div>
+            <div class="dec" style="width:{{ breadth.dec_pct }}%"></div>
+        </div>
+        <div style="font-size:.6rem;color:var(--text3);margin-top:4px">
+            {% if breadth.adv_pct > 60 %}Strong internal strength — broad-based rally{% elif breadth.dec_pct > 60 %}Broad weakness — most stocks falling{% else %}Mixed — no clear internal direction{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Volume & Meta #}
+    <div class="idx-data-card">
+        <div class="idx-data-title">Details</div>
+        <div class="idx-meta-grid">
+            {% if index.volume %}
+            <div class="idx-meta-item"><span class="idx-meta-label">Volume</span><span class="idx-meta-val">{{ "{:,.0f}".format(index.volume) }}</span></div>
+            {% endif %}
+            <div class="idx-meta-item"><span class="idx-meta-label">Exchange</span><span class="idx-meta-val">{{ index.exchange }}</span></div>
+            <div class="idx-meta-item"><span class="idx-meta-label">Category</span><span class="idx-meta-val" style="text-transform:capitalize">{{ index.category|replace('_',' ') }}</span></div>
+            <div class="idx-meta-item"><span class="idx-meta-label">Token</span><span class="idx-meta-val" style="font-size:.65rem;color:var(--text3)">{{ index.token }}</span></div>
+        </div>
+    </div>
+</div>
+
+<a href="/indices" class="idx-back-link"><i class="bi bi-arrow-left"></i> Back to All Indices</a>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+const TOKEN = "{{ index.token }}";
+const EXCHANGE = "{{ index.exchange }}";
+const IS_POSITIVE = {{ 'true' if index.change >= 0 else 'false' }};
+
+// ── Chart setup ──
+const chartEl = document.getElementById('chart');
+const chart = LightweightCharts.createChart(chartEl, {
+    layout: {
+        background: { color: 'transparent' },
+        textColor: '#94a3b8',
+        fontSize: 11,
+    },
+    grid: {
+        vertLines: { color: 'rgba(30,41,59,.5)' },
+        horzLines: { color: 'rgba(30,41,59,.5)' },
+    },
+    crosshair: {
+        mode: LightweightCharts.CrosshairMode.Normal,
+        vertLine: { color: 'rgba(139,92,246,.4)', width: 1, style: 2 },
+        horzLine: { color: 'rgba(139,92,246,.4)', width: 1, style: 2 },
+    },
+    rightPriceScale: {
+        borderColor: 'rgba(30,41,59,.8)',
+    },
+    timeScale: {
+        borderColor: 'rgba(30,41,59,.8)',
+        timeVisible: true,
+        secondsVisible: false,
+    },
+    handleScroll: { vertTouchDrag: false },
+});
+
+let series = null;
+let currentTf = '1D';
+
+function loadChart(tf) {
+    currentTf = tf;
+    document.getElementById('chartLoading').style.display = '';
+    document.querySelectorAll('.idx-tf').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.idx-tf[data-tf="${tf}"]`).classList.add('active');
+
+    fetch(`/api/index-history?token=${TOKEN}&exchange=${EXCHANGE}&tf=${tf}`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('chartLoading').style.display = 'none';
+
+            if (series) chart.removeSeries(series);
+
+            const candles = data.candles || [];
+            if (candles.length === 0) return;
+
+            const useCandlestick = ['3M','6M','1Y','5Y'].includes(tf);
+
+            if (useCandlestick) {
+                series = chart.addCandlestickSeries({
+                    upColor: '#00D09C',
+                    downColor: '#EF4444',
+                    borderUpColor: '#00D09C',
+                    borderDownColor: '#EF4444',
+                    wickUpColor: '#00D09C',
+                    wickDownColor: '#EF4444',
+                });
+                series.setData(candles.map(c => ({
+                    time: c[0],
+                    open: c[1],
+                    high: c[2],
+                    low: c[3],
+                    close: c[4],
+                })));
+            } else {
+                const color = IS_POSITIVE ? '#00D09C' : '#EF4444';
+                series = chart.addAreaSeries({
+                    lineColor: color,
+                    topColor: color + '33',
+                    bottomColor: 'transparent',
+                    lineWidth: 2,
+                });
+                series.setData(candles.map(c => ({
+                    time: c[0],
+                    value: c[4],
+                })));
+            }
+
+            chart.timeScale().fitContent();
+        })
+        .catch(() => {
+            document.getElementById('chartLoading').style.display = 'none';
+        });
+}
+
+// Timeframe buttons
+document.querySelectorAll('.idx-tf').forEach(btn => {
+    btn.addEventListener('click', () => loadChart(btn.dataset.tf));
+});
+
+// Initial load
+loadChart('1D');
+
+// Resize
+new ResizeObserver(() => {
+    chart.applyOptions({ width: chartEl.clientWidth });
+}).observe(chartEl);
+</script>
+{% endblock %}
