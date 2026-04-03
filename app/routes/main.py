@@ -39,8 +39,23 @@ def sector_detail(slug):
 
 @main_bp.route("/indices")
 def indices():
-    total = sum(len(v) for v in ALL_INDICES.values())
-    return render_template("indices.html", indices=ALL_INDICES, total=total)
+    from app.services.indices_service import fetch_all_indices, get_market_context
+    from app.services.market_ai import generate_market_analysis
+
+    idx_data = fetch_all_indices()
+    market_ctx = get_market_context()
+
+    # Real AI market analysis (returns None if no API key or error)
+    ai_analysis = generate_market_analysis(idx_data, market_ctx["breadth"], market_ctx["fii_dii"])
+
+    return render_template(
+        "indices.html",
+        idx=idx_data,
+        breadth=market_ctx["breadth"],
+        fii_dii=market_ctx["fii_dii"],
+        is_live=idx_data["live"],
+        ai=ai_analysis,
+    )
 
 
 @main_bp.route("/stocks")

@@ -1,0 +1,393 @@
+"""
+Indices Data Service — fetches real index data from Angel One SmartAPI.
+
+Responsibilities:
+- Fetch live quotes for all indices (FULL mode → LTP, OHLC, change, volume, 52W)
+- Fetch historical candle data for charts
+- Compute market breadth (advance/decline) from hero index constituents
+- Format everything for the Jinja2 template
+- Graceful fallback to dummy data if API unavailable
+
+Rate limits respected:
+- getMarketData: 1 req/sec, max 50 tokens per request
+- getCandleData: ~3 req/sec
+"""
+
+import logging
+import time
+from datetime import datetime, timedelta
+
+from app.services.angel_auth import get_angel_auth
+from app.services.scripmaster import get_index_tokens, SECTORAL_INDEX_TOKENS, VIX_TOKEN
+
+log = logging.getLogger(__name__)
+
+# ─── POPULAR & NICHE INDEX CLASSIFICATION ───────────────────────────────────
+# Popular: indices that a common investor follows daily
+POPULAR_TOKENS = {
+    # NSE Broad
+    "99926000", "99926013", "99926012", "99926033", "99926004",  # Nifty 50, Next50, 100, 200, 500
+    "99926014", "99926011", "99926060",  # Midcap 50, Midcap 100, Midcap 150
+    "99926061", "99926032", "99926062",  # Smlcap 50, 100, 250
+    # NSE Sectoral
+    "99926009", "99926037", "99926047",  # Bank, Fin Svc, Pvt Bank
+    "99926008", "99926029", "99926023",  # IT, Auto, Pharma
+    "99926021", "99926020", "99926030",  # FMCG, Energy, Metal
+    "99926018", "99926025", "99926019",  # Realty, PSU Bank, Infra
+    "99926031", "99926026",              # Media, Serv Sector
+    # BSE Broad
+    "99919000", "99919002", "99919003", "99919004",  # Sensex, BSE100, 200, 500
+    "99919016", "99919017", "99919042",  # Midcap, Smallcap, Largecap
+    "99919082", "99919083",              # Sensex 50, Sensex Next 50
+    # BSE Sectoral
+    "99919012", "99919005", "99919013",  # Bankex, BSE IT, Auto
+    # MCX
+    "99920003", "99920002", "99920000",  # Gold, Silver, Crude
+}
+
+# Niche: confusing for common investors — hide from default, show only in "All"
+NICHE_KEYWORDS = [
+    "PR 1X INV", "TR 1X INV", "PR 2X LEV", "TR 2X LEV",  # Leveraged / Inverse
+    "DIV POINT",                                            # Dividend point
+    "GS 10YR", "GS 4 8YR", "GS 8 13YR", "GS 11 15YR",   # Govt securities
+    "GS 15YRPLUS", "GS COMPSITE", "GS 10YR CLN",
+    "HANGSENG", "BEES-NAV",                                 # ETF NAV
+    "DOL30", "DOL100", "DOL200",                            # Dollar-denominated
+]
+
+
+def _is_niche(symbol):
+    """Check if an index is niche/confusing for common investors."""
+    upper = symbol.upper()
+    return any(kw in upper for kw in NICHE_KEYWORDS)
+
+
+# ─── SPARKLINE GENERATION ────────────────────────────────────────────────────
+
+def _sparkline_svg(candles):
+    """Generate an SVG sparkline from historical candle data."""
+    if not candles or len(candles) < 2:
+        return ""
+
+    closes = [c[4] for c in candles[-10:]]
+    if not closes:
+        return ""
+
+    mn, mx = min(closes), max(closes)
+    rng = mx - mn if mx != mn else 1
+    w, h = 64, 24
+
+    pts = []
+    for i, val in enumerate(closes):
+        x = (i / (len(closes) - 1)) * (w - 1)
+        y = h - 2 - ((val - mn) / rng) * (h - 4)
+        pts.append(f"{x:.1f},{y:.1f}")
+
+    is_positive = closes[-1] >= closes[0]
+    color = "#00D09C" if is_positive else "#EF4444"
+    points = " ".join(pts)
+
+    return (
+        f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" fill="none">'
+        f'<polyline points="{points}" stroke="{color}" stroke-width="1.5" '
+        f'fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    )
+
+
+def _dummy_sparkline(is_positive):
+    """Fallback sparkline when no historical data available."""
+    import random
+    pts = []
+    y = 12
+    for i in range(10):
+        y += random.uniform(-4, 3) if is_positive else random.uniform(-3, 4)
+        y = max(2, min(22, y))
+        pts.append(f"{i * 7},{y:.1f}")
+    color = "#00D09C" if is_positive else "#EF4444"
+    return (
+        f'<svg width="64" height="24" viewBox="0 0 63 24" fill="none">'
+        f'<polyline points="{" ".join(pts)}" stroke="{color}" stroke-width="1.5" '
+        f'fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    )
+
+
+# ─── LIVE DATA FETCHING ─────────────────────────────────────────────────────
+
+def _batch_fetch_quotes(tokens_by_exchange):
+    """
+    Fetch quotes in batches of 50 (Angel One limit per request).
+    Returns: dict {token: quote_data}
+    """
+    auth = get_angel_auth()
+    all_quotes = {}
+
+    for exchange, tokens in tokens_by_exchange.items():
+        for i in range(0, len(tokens), 50):
+            batch = tokens[i:i + 50]
+            result = auth.get_market_data("FULL", {exchange: batch})
+            if result:
+                for quote in result:
+                    all_quotes[str(quote.get("symbolToken", ""))] = quote
+
+            if i + 50 < len(tokens):
+                time.sleep(1.1)
+
+    return all_quotes
+
+
+def _format_index(token_info, quote=None, sparkline_html=""):
+    """Format a single index for the template."""
+    if quote:
+        ltp = float(quote.get("ltp", 0))
+        change = float(quote.get("netChange", 0))
+        change_pct = float(quote.get("percentChange", 0))
+        open_price = float(quote.get("open", 0))
+        high = float(quote.get("high", 0))
+        low = float(quote.get("low", 0))
+        close = float(quote.get("close", 0))
+        volume = int(quote.get("tradeVolume", 0))
+        low_52w = float(quote.get("52WeekLow", 0))
+        high_52w = float(quote.get("52WeekHigh", 0))
+
+        token = token_info["token"]
+        return {
+            "token": token,
+            "name": token_info.get("name", token_info.get("symbol", "")),
+            "symbol": token_info.get("symbol", ""),
+            "exchange": token_info.get("exchange", "NSE"),
+            "category": token_info.get("category", "thematic"),
+            "value": ltp,
+            "change": change,
+            "change_pct": round(change_pct, 2),
+            "open": open_price,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+            "low_52w": low_52w,
+            "high_52w": high_52w,
+            "sparkline": sparkline_html or _dummy_sparkline(change >= 0),
+            "is_popular": token in POPULAR_TOKENS,
+            "is_niche": _is_niche(token_info.get("symbol", "")),
+            "live": True,
+        }
+    else:
+        return {
+            "token": token_info.get("token", ""),
+            "name": token_info.get("name", token_info.get("symbol", "")),
+            "symbol": token_info.get("symbol", ""),
+            "exchange": token_info.get("exchange", "NSE"),
+            "category": token_info.get("category", "thematic"),
+            "value": 0, "change": 0, "change_pct": 0,
+            "open": 0, "high": 0, "low": 0, "close": 0,
+            "volume": 0, "low_52w": 0, "high_52w": 0,
+            "sparkline": "", "is_popular": False, "is_niche": False,
+            "live": False,
+        }
+
+
+# ─── PUBLIC API ──────────────────────────────────────────────────────────────
+
+def fetch_all_indices():
+    """
+    Fetch live data for all indices.
+
+    Returns dict with:
+        all_table: flat list of ALL live indices (for sortable table)
+        popular: subset of all_table where is_popular=True
+        hero: [NIFTY 50, BANK NIFTY]
+        vix: formatted VIX dict or None
+        sector_performance: sectoral indices sorted by change%
+        total: int (live count)
+        live: bool
+    """
+    token_data = get_index_tokens()
+    all_indices = token_data.get("all", [])
+
+    if not all_indices:
+        log.warning("No index tokens available — returning empty data")
+        return _fallback_indices()
+
+    # Group tokens by exchange for batch fetching
+    tokens_by_exchange = {}
+    for idx in all_indices:
+        exchange = idx["exchange"]
+        tokens_by_exchange.setdefault(exchange, []).append(idx["token"])
+
+    # Also add VIX
+    if token_data.get("vix"):
+        vix = token_data["vix"]
+        tokens_by_exchange.setdefault(vix["exchange"], []).append(vix["token"])
+
+    # Fetch live quotes
+    auth = get_angel_auth()
+    quotes = {}
+    is_live = False
+
+    if auth.is_configured:
+        quotes = _batch_fetch_quotes(tokens_by_exchange)
+        is_live = len(quotes) > 0
+        if is_live:
+            log.info("Fetched live quotes for %d indices", len(quotes))
+        else:
+            log.warning("API returned no quotes — falling back to dummy data")
+
+    if not is_live:
+        return _fallback_indices()
+
+    # Build flat table of all live indices
+    all_table = []
+    hero = []
+    vix_data = None
+
+    for idx in all_indices:
+        token = idx["token"]
+        quote = quotes.get(token)
+
+        # Skip indices with no data or zero LTP
+        if not quote or float(quote.get("ltp", 0)) == 0:
+            continue
+
+        # Skip VIX from the table — it's shown in Fear Level card only
+        if token == VIX_TOKEN:
+            continue
+
+        formatted = _format_index(idx, quote)
+        all_table.append(formatted)
+
+        # Hero indices
+        if token in ("99926000", "99926009"):
+            hero.append(formatted)
+
+    # VIX — separate from table
+    if token_data.get("vix"):
+        vix_quote = quotes.get(VIX_TOKEN)
+        if vix_quote:
+            vix_data = _format_index(token_data["vix"], vix_quote)
+
+    # Sector performance — sorted by change%, with LTP
+    sector_perf = []
+    for token, name in SECTORAL_INDEX_TOKENS.items():
+        quote = quotes.get(token)
+        if quote:
+            sector_perf.append({
+                "name": name,
+                "token": token,
+                "value": float(quote.get("ltp", 0)),
+                "change": float(quote.get("netChange", 0)),
+                "change_pct": round(float(quote.get("percentChange", 0)), 2),
+            })
+    sector_perf.sort(key=lambda x: x["change_pct"], reverse=True)
+
+    # Sort table by value (largest first) as default
+    all_table.sort(key=lambda x: x["value"], reverse=True)
+
+    # Popular subset
+    popular = [x for x in all_table if x["is_popular"]]
+    popular.sort(key=lambda x: x["value"], reverse=True)
+
+    # Ensure hero has NIFTY 50 first, then BANK NIFTY
+    hero.sort(key=lambda x: 0 if "50" in x["name"] and "BANK" not in x["name"] else 1)
+
+    return {
+        "all_table": all_table,
+        "popular": popular,
+        "hero": hero,
+        "vix": vix_data,
+        "sector_performance": sector_perf,
+        "total": len(all_table),
+        "total_popular": len(popular),
+        "live": True,
+    }
+
+
+def fetch_index_history(token, exchange="NSE", interval="ONE_DAY", days=365):
+    """Fetch historical candle data for a specific index."""
+    auth = get_angel_auth()
+    if not auth.is_configured:
+        return []
+
+    now = datetime.now()
+    from_date = (now - timedelta(days=days)).strftime("%Y-%m-%d 09:15")
+    to_date = now.strftime("%Y-%m-%d 15:30")
+
+    params = {
+        "exchange": exchange,
+        "symboltoken": token,
+        "interval": interval,
+        "fromdate": from_date,
+        "todate": to_date,
+    }
+
+    candles = auth.get_candle_data(params)
+    return candles if candles else []
+
+
+# ─── FALLBACK ────────────────────────────────────────────────────────────────
+
+def _fallback_indices():
+    """Return dummy data when API is unavailable."""
+    from app.dummy_data import ALL_INDICES, MARKET_BREADTH, FII_DII
+
+    broad = ALL_INDICES.get("broad_market", [])
+    sectoral = ALL_INDICES.get("sectoral", [])
+    thematic = ALL_INDICES.get("thematic", [])
+
+    for idx_list in [broad, sectoral, thematic]:
+        for idx in idx_list:
+            idx.setdefault("token", "")
+            idx.setdefault("symbol", idx.get("name", ""))
+            idx.setdefault("exchange", "NSE")
+            idx.setdefault("category", "broad_market")
+            idx.setdefault("open", idx.get("value", 0))
+            idx.setdefault("high", idx.get("value", 0) * 1.005)
+            idx.setdefault("low", idx.get("value", 0) * 0.995)
+            idx.setdefault("close", idx.get("value", 0))
+            idx.setdefault("volume", 0)
+            idx.setdefault("low_52w", idx.get("value", 0) * 0.8)
+            idx.setdefault("high_52w", idx.get("value", 0) * 1.15)
+            idx.setdefault("is_popular", True)
+            idx.setdefault("is_niche", False)
+            idx.setdefault("live", False)
+
+    all_table = broad + sectoral + thematic
+    all_table.sort(key=lambda x: x.get("value", 0), reverse=True)
+
+    nifty50 = next((i for i in broad if i.get("name", "") == "NIFTY 50"), None)
+    banknifty = next((i for i in sectoral if "BANK" in i.get("name", "") and "PSU" not in i.get("name", "")), None)
+    hero = [x for x in [nifty50, banknifty] if x]
+
+    vix = {
+        "name": "INDIA VIX", "symbol": "INDIA VIX", "token": VIX_TOKEN,
+        "exchange": "NSE", "value": 14.5, "change": -0.3, "change_pct": -2.03,
+        "live": False,
+    }
+
+    sector_perf = []
+    for idx in sectoral[:10]:
+        sector_perf.append({
+            "name": idx["name"], "token": idx.get("token", ""),
+            "value": idx["value"], "change": idx["change"],
+            "change_pct": idx["change_pct"],
+        })
+    sector_perf.sort(key=lambda x: x["change_pct"], reverse=True)
+
+    return {
+        "all_table": all_table,
+        "popular": all_table,
+        "hero": hero,
+        "vix": vix,
+        "sector_performance": sector_perf,
+        "total": len(all_table),
+        "total_popular": len(all_table),
+        "live": False,
+    }
+
+
+def get_market_context():
+    """Get additional market context data (breadth, FII/DII)."""
+    from app.dummy_data import MARKET_BREADTH, FII_DII
+    return {
+        "breadth": MARKET_BREADTH,
+        "fii_dii": FII_DII,
+    }
