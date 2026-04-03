@@ -22,6 +22,20 @@ from app.services.scripmaster import get_index_tokens, SECTORAL_INDEX_TOKENS, VI
 
 log = logging.getLogger(__name__)
 
+# ─── KEY INDICES STRIP — shown in horizontal scroll at top ────────────────
+# Order matters: this is the display order in the strip
+KEY_INDEX_TOKENS = (
+    "99926000",  # NIFTY 50
+    "99926009",  # BANK NIFTY
+    "99919000",  # SENSEX
+    "99926037",  # NIFTY FIN SERVICE
+    "99926008",  # NIFTY IT
+    "99926011",  # NIFTY MIDCAP 100
+    "99926032",  # NIFTY SMLCAP 100
+    "99926013",  # NIFTY NEXT 50
+    "99926004",  # NIFTY 500
+)
+
 # ─── POPULAR & NICHE INDEX CLASSIFICATION ───────────────────────────────────
 # Popular: indices that a common investor follows daily
 POPULAR_TOKENS = {
@@ -290,8 +304,8 @@ def fetch_all_indices():
         formatted = _format_index(idx, quote)
         all_table.append(formatted)
 
-        # Hero indices
-        if token in ("99926000", "99926009"):
+        # Key indices strip — top indices investors check first
+        if token in KEY_INDEX_TOKENS:
             hero.append(formatted)
 
     # VIX — separate from table
@@ -321,22 +335,22 @@ def fetch_all_indices():
     popular = [x for x in all_table if x["is_popular"]]
     popular.sort(key=lambda x: x["value"], reverse=True)
 
-    # Ensure hero has NIFTY 50 first, then BANK NIFTY
-    hero.sort(key=lambda x: 0 if "50" in x["name"] and "BANK" not in x["name"] else 1)
+    # Sort key indices in priority order
+    _key_order = {t: i for i, t in enumerate(KEY_INDEX_TOKENS)}
+    hero.sort(key=lambda x: _key_order.get(x["token"], 99))
 
-    # Real sparklines + 52W range for hero indices (365-day candles, 2 API calls)
-    for h in hero:
+    # Real sparklines for first 2 hero indices only (NIFTY, BANKNIFTY — 365-day candles)
+    for h in hero[:2]:
         try:
             candles = fetch_index_history(h["token"], h["exchange"], "ONE_DAY", days=365)
             if candles and len(candles) >= 2:
                 h["sparkline"] = _sparkline_svg(candles)
-                # Compute 52W high/low from historical data (Angel One returns 0 for indices)
                 w52 = compute_52w_from_candles(candles)
                 if w52:
                     h["low_52w"] = w52["low"]
                     h["high_52w"] = w52["high"]
         except Exception:
-            pass  # Keep existing dummy sparkline
+            pass
 
     return {
         "all_table": all_table,

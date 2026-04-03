@@ -359,18 +359,19 @@
         @media(max-width:480px){.health-grid{grid-template-columns:1fr!important}}
 
         /* ═══ HERO INDEX CARDS ═══ */
-        .hero-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
-        .hero-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden}
-        .hero-card::after{content:'';position:absolute;top:0;right:0;width:120px;height:120px;border-radius:50%;opacity:.03}
-        .hero-card.up::after{background:var(--green)}.hero-card.down::after{background:var(--red)}
-        .hero-nm{font-size:.72rem;font-weight:600;color:var(--text2);margin-bottom:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-        .hero-val{font-size:1.5rem;font-weight:900;line-height:1.1}
-        .hero-chg{font-size:.82rem;font-weight:700;margin-top:4px;display:flex;align-items:center;gap:4px}
-        .hero-stats{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
-        .hero-stat{font-size:.62rem;color:var(--text3)}
-        .hero-stat span{color:var(--text2);font-weight:600}
-        .hero-spark{margin-top:8px;opacity:.6}
-        @media(max-width:480px){.hero-grid{grid-template-columns:1fr}.hero-val{font-size:1.3rem}}
+        /* Key indices horizontal strip */
+        .key-idx-strip{display:flex;gap:10px;overflow-x:auto;padding:2px 0 14px;margin-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+        .key-idx-strip::-webkit-scrollbar{height:4px}.key-idx-strip::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+        .key-idx-card{flex:0 0 auto;min-width:155px;max-width:185px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-decoration:none;color:inherit;transition:border-color .15s,transform .1s;position:relative;overflow:hidden}
+        .key-idx-card:hover{border-color:var(--border-light);transform:translateY(-1px)}
+        .key-idx-card.up{border-bottom:2px solid rgba(0,208,156,.4)}.key-idx-card.down{border-bottom:2px solid rgba(239,68,68,.4)}
+        .key-idx-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+        .key-idx-name{font-size:.62rem;font-weight:700;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+        .key-idx-ex{font-size:.42rem;color:var(--text3);background:var(--bg-elevated);padding:1px 5px;border-radius:3px;font-weight:600}
+        .key-idx-val{font-size:1.05rem;font-weight:900;line-height:1.2}
+        .key-idx-chg{font-size:.62rem;font-weight:700;margin-top:2px;display:flex;align-items:center;gap:3px}
+        .key-idx-spark{margin-top:4px;opacity:.5;height:24px;overflow:hidden}
+        .key-idx-spark svg{width:100%;height:24px}
 
         /* ═══ MARKET VALUATION METER ═══ */
         .val-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:16px}
@@ -459,13 +460,7 @@
 
         /* Hero card desc */
         .hero-desc{font-size:.55rem;color:var(--text3);font-weight:400}
-        .hero-52w{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
-        .hero-52w-label{font-size:.5rem;color:var(--text3);font-weight:700}
-        .hero-52w-lo,.hero-52w-hi{font-size:.5rem;color:var(--text3);font-variant-numeric:tabular-nums;min-width:36px}
-        .hero-52w-hi{text-align:right}
-        .hero-52w-track{flex:1;height:4px;background:var(--bg-elevated);border-radius:2px;position:relative}
-        .hero-52w-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--red),var(--gold),var(--green))}
-        .hero-52w-dot{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;border:2px solid var(--bg-card);transform:translate(-50%,-50%);box-shadow:0 0 4px rgba(255,255,255,.3)}
+        /* (hero-52w styles moved to index detail page only) */
 
         /* Valuation card header */
         .val-header{display:flex;justify-content:space-between;align-items:center;font-size:.85rem;font-weight:700;margin-bottom:2px}
@@ -602,7 +597,7 @@
 
         /* Table */
         .idx-table-wrap{overflow-x:auto;scrollbar-width:thin}
-        .idx-table{width:100%;border-collapse:collapse;font-size:.72rem}
+        .idx-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.72rem;table-layout:fixed}
         .idx-table th{padding:8px 14px;text-align:left;font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;white-space:nowrap;user-select:none}
         .idx-table th.r{text-align:right}
         .idx-table th.sortable{cursor:pointer;transition:color .12s}
@@ -616,10 +611,11 @@
         .idx-table tr.clickable{cursor:pointer}
         .idx-table tr.clickable:hover{background:var(--accent-bg)}
         .idx-table .mono{font-variant-numeric:tabular-nums;font-weight:600}
+        .idx-table colgroup .col-name{width:45%}.idx-table colgroup .col-exch{width:7%}.idx-table colgroup .col-ltp{width:15%}.idx-table colgroup .col-chg{width:14%}.idx-table colgroup .col-chgp{width:11%}.idx-table colgroup .col-trend{width:8%}
 
         /* Name cell */
-        .idx-name-cell{display:flex;align-items:center;gap:6px;min-width:180px}
-        .idx-name-text{font-weight:600;color:var(--text);white-space:nowrap}
+        .idx-name-cell{display:flex;align-items:center;gap:6px;overflow:hidden}
+        .idx-name-text{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .idx-cat-tag{font-size:.45rem;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
         .idx-cat-tag.broad{background:rgba(96,165,250,.12);color:#60a5fa}
         .idx-cat-tag.sector{background:rgba(245,158,11,.12);color:#f59e0b}
@@ -636,7 +632,8 @@
         .chg-pill.down{background:var(--red-bg);color:var(--red)}
 
         /* Sparkline cell */
-        .spark-cell{text-align:center}
+        .spark-cell{text-align:center;overflow:hidden;max-width:0}
+        .spark-cell svg{width:100%;height:28px;display:block}
 
         /* No results */
         .idx-no-results{padding:30px;text-align:center;color:var(--text3);font-size:.82rem}

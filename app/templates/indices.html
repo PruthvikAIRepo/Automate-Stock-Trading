@@ -168,51 +168,22 @@
     </div>
 </div>
 
-{# ═══ SECTION 3: HERO INDICES ═══ #}
+{# ═══ SECTION 3: KEY INDICES STRIP ═══ #}
 {% if idx.hero %}
-<div class="hero-grid">
-    {% for h in idx.hero[:2] %}
-    <a href="/index/{{ h.token }}" class="hero-card {{ 'up' if h.change >= 0 else 'down' }}" style="text-decoration:none;color:inherit;cursor:pointer">
-        <div class="hero-nm">
-            <span class="idx-ex nse">{{ h.exchange }}</span>
-            {{ h.name }}
-            {% if loop.index == 1 %}
-                <span class="hero-desc">— Top 50 companies</span>
-            {% else %}
-                <span class="hero-desc">— Top 12 banks</span>
-            {% endif %}
-            <i class="bi bi-chevron-right" style="margin-left:auto;font-size:.6rem;color:var(--text3)"></i>
+<div class="key-idx-strip">
+    {% for h in idx.hero %}
+    <a href="/index/{{ h.token }}" class="key-idx-card {{ 'up' if h.change >= 0 else 'down' }}">
+        <div class="key-idx-top">
+            <span class="key-idx-name">{{ h.name }}</span>
+            <span class="key-idx-ex">{{ h.exchange }}</span>
         </div>
-        <div class="hero-val">{{ "{:,.2f}".format(h.value) }}</div>
-        <div class="hero-chg {{ 'text-up' if h.change >= 0 else 'text-down' }}">
-            <i class="bi {{ 'bi-caret-up-fill' if h.change >= 0 else 'bi-caret-down-fill' }}" style="font-size:.6rem"></i>
-            {{ "+" if h.change >= 0 else "" }}{{ "{:,.2f}".format(h.change) }} points
+        <div class="key-idx-val">{{ "{:,.2f}".format(h.value) }}</div>
+        <div class="key-idx-chg {{ 'text-up' if h.change >= 0 else 'text-down' }}">
+            <i class="bi {{ 'bi-caret-up-fill' if h.change >= 0 else 'bi-caret-down-fill' }}" style="font-size:.5rem"></i>
+            {{ "+" if h.change >= 0 else "" }}{{ "{:,.2f}".format(h.change) }}
             ({{ "+" if h.change_pct >= 0 else "" }}{{ h.change_pct }}%)
         </div>
-        <div class="hero-stats">
-            <div class="hero-stat">Open <span>{{ "{:,.0f}".format(h.open) }}</span></div>
-            <div class="hero-stat">High <span>{{ "{:,.0f}".format(h.high) }}</span></div>
-            <div class="hero-stat">Low <span>{{ "{:,.0f}".format(h.low) }}</span></div>
-            {% if h.volume %}<div class="hero-stat">Vol <span>{{ "{:,.0f}".format(h.volume) }}</span></div>{% endif %}
-            {% if h.pe %}<div class="hero-stat">PE <span>{{ "%.1f"|format(h.pe) }}</span></div>{% endif %}
-            {% if h.advances is defined and h.constituents_total %}
-            <div class="hero-stat">Advancing <span class="text-up">{{ h.advances }}/{{ h.constituents_total }}</span></div>
-            {% endif %}
-        </div>
-        {% if h.high_52w and h.low_52w and h.high_52w != h.low_52w %}
-        <div class="hero-52w">
-            {% set w52s = h.high_52w - h.low_52w %}
-            {% set w52p = ((h.value - h.low_52w) / w52s * 100) %}
-            <span class="hero-52w-label">52W</span>
-            <span class="hero-52w-lo">{{ "{:,.0f}".format(h.low_52w) }}</span>
-            <div class="hero-52w-track">
-                <div class="hero-52w-fill" style="width:{{ [([w52p, 1]|max), 99]|min }}%"></div>
-                <div class="hero-52w-dot" style="left:{{ [([w52p, 1]|max), 99]|min }}%"></div>
-            </div>
-            <span class="hero-52w-hi">{{ "{:,.0f}".format(h.high_52w) }}</span>
-        </div>
-        {% endif %}
-        {% if h.sparkline %}<div class="hero-spark">{{ h.sparkline|safe }}</div>{% endif %}
+        {% if h.sparkline %}<div class="key-idx-spark">{{ h.sparkline|safe }}</div>{% endif %}
     </a>
     {% endfor %}
 </div>
@@ -390,14 +361,17 @@
 
     <div class="idx-table-wrap">
         <table class="idx-table" id="idxTable">
+            <colgroup>
+                <col class="col-name"><col class="col-exch"><col class="col-ltp"><col class="col-chg"><col class="col-chgp"><col class="col-trend">
+            </colgroup>
             <thead>
                 <tr>
                     <th class="sortable" onclick="sortTable(0, 'str')">Index Name <i class="bi bi-chevron-expand"></i></th>
-                    <th class="sortable" onclick="sortTable(1, 'str')" style="width:60px">Exch <i class="bi bi-chevron-expand"></i></th>
+                    <th class="sortable" onclick="sortTable(1, 'str')">Exch <i class="bi bi-chevron-expand"></i></th>
                     <th class="sortable r" onclick="sortTable(2, 'num')">LTP <i class="bi bi-chevron-expand"></i></th>
                     <th class="sortable r" onclick="sortTable(3, 'num')">Change <i class="bi bi-chevron-expand"></i></th>
                     <th class="sortable r" onclick="sortTable(4, 'num')">Change % <i class="bi bi-chevron-expand"></i></th>
-                    <th style="width:70px">Trend</th>
+                    <th>Trend</th>
                 </tr>
             </thead>
             <tbody id="idxBody">
@@ -730,13 +704,19 @@ function applySectorData(tf) {
                 setTimeout(() => { row.style.background = ''; }, 800);
             }
 
-            // Update hero cards
-            const heroCards = document.querySelectorAll('.hero-card');
-            heroCards.forEach(card => {
-                // Match by checking if the card link contains the token
+            // Update key indices strip cards
+            document.querySelectorAll('.key-idx-card').forEach(card => {
                 if (card.href && card.href.includes(data.token)) {
-                    const valEl = card.querySelector('.hero-val');
+                    const valEl = card.querySelector('.key-idx-val');
                     if (valEl) valEl.textContent = Number(data.ltp).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    const chgEl = card.querySelector('.key-idx-chg');
+                    if (chgEl) {
+                        const isUp = data.change >= 0;
+                        chgEl.className = 'key-idx-chg ' + (isUp ? 'text-up' : 'text-down');
+                        chgEl.innerHTML = `<i class="bi ${isUp ? 'bi-caret-up-fill' : 'bi-caret-down-fill'}" style="font-size:.5rem"></i> ${isUp ? '+' : ''}${Number(data.change).toFixed(2)} (${isUp ? '+' : ''}${data.change_pct}%)`;
+                    }
+                    card.style.background = 'rgba(139,92,246,.06)';
+                    setTimeout(() => { card.style.background = ''; }, 800);
                 }
             });
         });
