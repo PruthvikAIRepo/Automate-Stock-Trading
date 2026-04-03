@@ -1,6 +1,6 @@
 """
 RSS feed scraper for Indian stock market news.
-Fetches from 5 trusted sources, keeps only articles published after a cutoff time,
+Fetches from 10 trusted sources, keeps only articles published after a cutoff time,
 deduplicates against DB + title similarity.
 """
 
@@ -16,11 +16,23 @@ from app.db import get_existing_urls
 log = logging.getLogger(__name__)
 
 FEEDS = {
+    # Economic Times — 3 feeds (default, markets, industry)
     "https://economictimes.indiatimes.com/rssfeedsdefault.cms": "Economic Times",
+    "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms": "ET Markets",
+    "https://economictimes.indiatimes.com/industry/rssfeeds/13352306.cms": "ET Industry",
+    # LiveMint — 2 feeds (markets, companies)
     "https://www.livemint.com/rss/markets": "LiveMint",
-    "https://www.business-standard.com/rss/markets-106.rss": "Business Standard",
-    "http://pulse.zerodha.com/feed.php": "Zerodha Pulse",
+    "https://www.livemint.com/rss/companies": "LiveMint Companies",
+    # Hindu BusinessLine — high-frequency updates
+    "https://www.thehindubusinessline.com/feeder/default.rss": "Hindu BusinessLine",
+    # Investing.com India — global perspective on Indian markets
+    "https://in.investing.com/rss/news_25.rss": "Investing.com India",
+    # NDTV Profit
     "https://feeds.feedburner.com/ndtvprofit-latest": "NDTV Profit",
+    # Zerodha Pulse — curated market news
+    "http://pulse.zerodha.com/feed.php": "Zerodha Pulse",
+    # ET Top Stories — broader coverage
+    "https://economictimes.indiatimes.com/rssfeedstopstories.cms": "ET Top Stories",
 }
 
 _UA = (

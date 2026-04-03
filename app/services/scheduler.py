@@ -126,7 +126,7 @@ def _run_cycle(since):
         # Step 1: Fetch feeds -- time-filtered, only fresh articles
         t0 = _time.time()
         raw_articles = fetch_all_feeds(since=since)
-        log.info("[Step 1/5] Fetched %d fresh articles from 5 feeds (%.1fs)", len(raw_articles), _time.time() - t0)
+        log.info("[Step 1/5] Fetched %d fresh articles from 10 feeds (%.1fs)", len(raw_articles), _time.time() - t0)
         if not raw_articles:
             log.info("No fresh articles -- cycle done")
             log.info("=" * 60)
