@@ -597,7 +597,7 @@
 
         /* Table */
         .idx-table-wrap{overflow-x:auto;scrollbar-width:thin}
-        .idx-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.72rem;table-layout:fixed}
+        .idx-table{width:100%;border-collapse:collapse;font-size:.72rem;table-layout:fixed}
         .idx-table th{padding:8px 14px;text-align:left;font-size:.6rem;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;white-space:nowrap;user-select:none}
         .idx-table th.r{text-align:right}
         .idx-table th.sortable{cursor:pointer;transition:color .12s}
@@ -614,8 +614,9 @@
         .idx-table colgroup .col-name{width:45%}.idx-table colgroup .col-exch{width:7%}.idx-table colgroup .col-ltp{width:15%}.idx-table colgroup .col-chg{width:14%}.idx-table colgroup .col-chgp{width:11%}.idx-table colgroup .col-trend{width:8%}
 
         /* Name cell */
-        .idx-name-cell{display:flex;align-items:center;gap:6px;overflow:hidden}
-        .idx-name-text{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .idx-name-cell{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+        .idx-name-text{font-weight:600;color:var(--text)}
+        .idx-cat-tag{margin-left:6px;vertical-align:middle}
         .idx-cat-tag{font-size:.45rem;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
         .idx-cat-tag.broad{background:rgba(96,165,250,.12);color:#60a5fa}
         .idx-cat-tag.sector{background:rgba(245,158,11,.12);color:#f59e0b}
