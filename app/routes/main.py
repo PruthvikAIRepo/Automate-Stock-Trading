@@ -3,7 +3,7 @@ from app.dummy_data import (
     get_all_sectors, get_sector_detail, get_all_stocks_flat, get_stock_by_symbol,
     get_top_gainers, get_top_losers, get_most_active, get_52w_high, get_52w_low,
     get_watchlist, get_screener_results,
-    ALL_INDICES, MARKET_BREADTH, FII_DII, NEWS_ARTICLES, SCREENER_PRESETS,
+    ALL_INDICES, MARKET_BREADTH, FII_DII, SCREENER_PRESETS,
 )
 
 main_bp = Blueprint("main", __name__)
@@ -70,7 +70,25 @@ def watchlist():
 
 @main_bp.route("/news")
 def news():
-    return render_template("news.html", news=NEWS_ARTICLES)
+    from app.db import get_articles
+
+    page = request.args.get("page", 1, type=int)
+    category = request.args.get("category", "all")
+    per_page = 20
+
+    page = max(1, page)
+    articles, total = get_articles(page=page, per_page=per_page, category=category)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+
+    return render_template(
+        "news.html",
+        news=articles,
+        page=page,
+        total_pages=total_pages,
+        total=total,
+        category=category,
+    )
 
 
 @main_bp.route("/screener")

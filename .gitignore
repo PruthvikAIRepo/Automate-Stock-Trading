@@ -47,3 +47,4 @@ Desktop.ini
 # Static placeholders (empty dirs)
 app/static/css/
 app/static/js/
+instance/

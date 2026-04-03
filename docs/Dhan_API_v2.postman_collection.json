@@ -1,0 +1,530 @@
+{
+    "info": {
+        "name": "Dhan API v2 — StockPulse",
+        "description": "Complete Dhan API v2 collection for StockPulse trading platform. 56 endpoints covering orders, market data, portfolio, and WebSocket feeds.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "apikey",
+        "apikey": [
+            { "key": "key", "value": "access-token", "type": "string" },
+            { "key": "value", "value": "{{access_token}}", "type": "string" },
+            { "key": "in", "value": "header", "type": "string" }
+        ]
+    },
+    "variable": [],
+    "item": [
+        {
+            "name": "01 — Auth & Config",
+            "item": [
+                {
+                    "name": "Generate Token (TOTP)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"pin\": \"123456\",\n    \"totp\": \"000000\"\n}" },
+                        "url": { "raw": "{{auth_url}}/app/generateAccessToken", "host": ["{{auth_url}}"], "path": ["app", "generateAccessToken"] }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) {", "    var json = pm.response.json();", "    pm.environment.set('access_token', json.accessToken);", "    pm.environment.set('client_id', json.dhanClientId);", "}"] } }]
+                },
+                {
+                    "name": "Renew Token",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "access-token", "value": "{{access_token}}" }, { "key": "dhanClientId", "value": "{{client_id}}" }],
+                        "url": { "raw": "{{base_url}}/v2/RenewToken", "host": ["{{base_url}}"], "path": ["v2", "RenewToken"] }
+                    }
+                },
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/profile", "host": ["{{base_url}}"], "path": ["v2", "profile"] }
+                    }
+                },
+                {
+                    "name": "Set Static IP",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/ip/setIP", "host": ["{{base_url}}"], "path": ["v2", "ip", "setIP"] }
+                    }
+                },
+                {
+                    "name": "Get Current IP",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/ip/getIP", "host": ["{{base_url}}"], "path": ["v2", "ip", "getIP"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "02 — Orders",
+            "item": [
+                {
+                    "name": "Place Order",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"correlationId\": \"stockpulse-001\",\n    \"transactionType\": \"BUY\",\n    \"exchangeSegment\": \"NSE_EQ\",\n    \"productType\": \"INTRADAY\",\n    \"orderType\": \"MARKET\",\n    \"validity\": \"DAY\",\n    \"securityId\": \"{{security_id_reliance}}\",\n    \"quantity\": 1,\n    \"disclosedQuantity\": \"\",\n    \"price\": \"\",\n    \"triggerPrice\": \"\",\n    \"afterMarketOrder\": false,\n    \"amoTime\": \"\",\n    \"boProfitValue\": \"\",\n    \"boStopLossValue\": \"\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/orders", "host": ["{{base_url}}"], "path": ["v2", "orders"] }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) {", "    pm.environment.set('order_id', pm.response.json().orderId);", "}"] } }]
+                },
+                {
+                    "name": "Modify Order",
+                    "request": {
+                        "method": "PUT",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"orderId\": \"{{order_id}}\",\n    \"orderType\": \"LIMIT\",\n    \"legName\": \"\",\n    \"quantity\": 1,\n    \"price\": 2800.00,\n    \"disclosedQuantity\": \"\",\n    \"triggerPrice\": \"\",\n    \"validity\": \"DAY\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["v2", "orders", "{{order_id}}"] }
+                    }
+                },
+                {
+                    "name": "Cancel Order",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["v2", "orders", "{{order_id}}"] }
+                    }
+                },
+                {
+                    "name": "Slice Order",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"transactionType\": \"BUY\",\n    \"exchangeSegment\": \"NSE_EQ\",\n    \"productType\": \"INTRADAY\",\n    \"orderType\": \"MARKET\",\n    \"validity\": \"DAY\",\n    \"securityId\": \"{{security_id_reliance}}\",\n    \"quantity\": 100,\n    \"price\": \"\",\n    \"triggerPrice\": \"\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/orders/slicing", "host": ["{{base_url}}"], "path": ["v2", "orders", "slicing"] }
+                    }
+                },
+                {
+                    "name": "Get All Orders (Order Book)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/orders", "host": ["{{base_url}}"], "path": ["v2", "orders"] }
+                    }
+                },
+                {
+                    "name": "Get Order by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["v2", "orders", "{{order_id}}"] }
+                    }
+                },
+                {
+                    "name": "Get Order by Correlation ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/orders/external/stockpulse-001", "host": ["{{base_url}}"], "path": ["v2", "orders", "external", "stockpulse-001"] }
+                    }
+                },
+                {
+                    "name": "Get All Trades (Trade Book)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/trades", "host": ["{{base_url}}"], "path": ["v2", "trades"] }
+                    }
+                },
+                {
+                    "name": "Get Trades for Order",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/trades/{{order_id}}", "host": ["{{base_url}}"], "path": ["v2", "trades", "{{order_id}}"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "03 — Super Orders",
+            "item": [
+                {
+                    "name": "Place Super Order",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"correlationId\": \"super-001\",\n    \"transactionType\": \"BUY\",\n    \"exchangeSegment\": \"NSE_EQ\",\n    \"productType\": \"CNC\",\n    \"orderType\": \"LIMIT\",\n    \"securityId\": \"{{security_id_hdfcbank}}\",\n    \"quantity\": 5,\n    \"price\": 1500,\n    \"targetPrice\": 1600,\n    \"stopLossPrice\": 1400,\n    \"trailingJump\": 10\n}" },
+                        "url": { "raw": "{{base_url}}/v2/super/orders", "host": ["{{base_url}}"], "path": ["v2", "super", "orders"] }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) {", "    pm.environment.set('order_id', pm.response.json().orderId);", "}"] } }]
+                },
+                {
+                    "name": "Modify Super Order (Entry Leg)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"orderId\": \"{{order_id}}\",\n    \"orderType\": \"LIMIT\",\n    \"legName\": \"ENTRY_LEG\",\n    \"quantity\": 10,\n    \"price\": 1450,\n    \"targetPrice\": 1600,\n    \"stopLossPrice\": 1350,\n    \"trailingJump\": 15\n}" },
+                        "url": { "raw": "{{base_url}}/v2/super/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["v2", "super", "orders", "{{order_id}}"] }
+                    }
+                },
+                {
+                    "name": "Cancel Super Order (Entry Leg)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/super/orders/{{order_id}}/ENTRY_LEG", "host": ["{{base_url}}"], "path": ["v2", "super", "orders", "{{order_id}}", "ENTRY_LEG"] }
+                    }
+                },
+                {
+                    "name": "Get All Super Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/super/orders", "host": ["{{base_url}}"], "path": ["v2", "super", "orders"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "04 — Forever Orders (GTT)",
+            "item": [
+                {
+                    "name": "Create Forever Order (Single)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"correlationId\": \"\",\n    \"orderFlag\": \"SINGLE\",\n    \"transactionType\": \"BUY\",\n    \"exchangeSegment\": \"NSE_EQ\",\n    \"productType\": \"CNC\",\n    \"orderType\": \"LIMIT\",\n    \"validity\": \"DAY\",\n    \"securityId\": \"{{security_id_hdfcbank}}\",\n    \"quantity\": 5,\n    \"disclosedQuantity\": 0,\n    \"price\": 1428,\n    \"triggerPrice\": 1427\n}" },
+                        "url": { "raw": "{{base_url}}/v2/forever/orders", "host": ["{{base_url}}"], "path": ["v2", "forever", "orders"] }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) {", "    pm.environment.set('order_id', pm.response.json().orderId);", "}"] } }]
+                },
+                {
+                    "name": "Create Forever Order (OCO)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"orderFlag\": \"OCO\",\n    \"transactionType\": \"BUY\",\n    \"exchangeSegment\": \"NSE_EQ\",\n    \"productType\": \"CNC\",\n    \"orderType\": \"LIMIT\",\n    \"validity\": \"DAY\",\n    \"securityId\": \"{{security_id_hdfcbank}}\",\n    \"quantity\": 5,\n    \"disclosedQuantity\": 1,\n    \"price\": 1428,\n    \"triggerPrice\": 1427,\n    \"price1\": 1420,\n    \"triggerPrice1\": 1419,\n    \"quantity1\": 10\n}" },
+                        "url": { "raw": "{{base_url}}/v2/forever/orders", "host": ["{{base_url}}"], "path": ["v2", "forever", "orders"] }
+                    }
+                },
+                {
+                    "name": "Modify Forever Order",
+                    "request": {
+                        "method": "PUT",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"orderId\": \"{{order_id}}\",\n    \"orderFlag\": \"SINGLE\",\n    \"orderType\": \"LIMIT\",\n    \"legName\": \"TARGET_LEG\",\n    \"quantity\": 15,\n    \"price\": 1421,\n    \"disclosedQuantity\": 1,\n    \"triggerPrice\": 1420,\n    \"validity\": \"DAY\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/forever/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["v2", "forever", "orders", "{{order_id}}"] }
+                    }
+                },
+                {
+                    "name": "Delete Forever Order",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/forever/orders/{{order_id}}", "host": ["{{base_url}}"], "path": ["v2", "forever", "orders", "{{order_id}}"] }
+                    }
+                },
+                {
+                    "name": "Get All Forever Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/forever/all", "host": ["{{base_url}}"], "path": ["v2", "forever", "all"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "05 — Conditional Triggers",
+            "item": [
+                {
+                    "name": "Create Trigger",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"condition\": {\n        \"comparisonType\": \"TECHNICAL_WITH_VALUE\",\n        \"exchangeSegment\": \"NSE_EQ\",\n        \"securityId\": \"{{security_id_reliance}}\",\n        \"indicatorName\": \"SMA_20\",\n        \"timeFrame\": \"DATE\",\n        \"operator\": \"CROSSING_UP\",\n        \"comparingValue\": 2800,\n        \"expDate\": \"2026-12-31\",\n        \"frequency\": \"ONCE\",\n        \"userNote\": \"StockPulse alert test\"\n    },\n    \"orders\": [\n        {\n            \"transactionType\": \"BUY\",\n            \"exchangeSegment\": \"NSE_EQ\",\n            \"productType\": \"CNC\",\n            \"orderType\": \"LIMIT\",\n            \"securityId\": \"{{security_id_reliance}}\",\n            \"quantity\": 1,\n            \"validity\": \"DAY\",\n            \"price\": \"2800.00\",\n            \"discQuantity\": \"0\",\n            \"triggerPrice\": \"0\"\n        }\n    ]\n}" },
+                        "url": { "raw": "{{base_url}}/v2/alerts/orders", "host": ["{{base_url}}"], "path": ["v2", "alerts", "orders"] }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) {", "    pm.environment.set('alert_id', pm.response.json().alertId);", "}"] } }]
+                },
+                {
+                    "name": "Get All Triggers",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/alerts/orders", "host": ["{{base_url}}"], "path": ["v2", "alerts", "orders"] }
+                    }
+                },
+                {
+                    "name": "Get Trigger by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/alerts/orders/{{alert_id}}", "host": ["{{base_url}}"], "path": ["v2", "alerts", "orders", "{{alert_id}}"] }
+                    }
+                },
+                {
+                    "name": "Cancel Trigger",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/alerts/orders/{{alert_id}}", "host": ["{{base_url}}"], "path": ["v2", "alerts", "orders", "{{alert_id}}"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "06 — Portfolio",
+            "item": [
+                {
+                    "name": "Get Holdings",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/holdings", "host": ["{{base_url}}"], "path": ["v2", "holdings"] }
+                    }
+                },
+                {
+                    "name": "Get Positions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/positions", "host": ["{{base_url}}"], "path": ["v2", "positions"] }
+                    }
+                },
+                {
+                    "name": "Convert Position",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"fromProductType\": \"INTRADAY\",\n    \"exchangeSegment\": \"NSE_EQ\",\n    \"positionType\": \"LONG\",\n    \"securityId\": \"{{security_id_tcs}}\",\n    \"tradingSymbol\": \"\",\n    \"convertQty\": 1,\n    \"toProductType\": \"CNC\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/positions/convert", "host": ["{{base_url}}"], "path": ["v2", "positions", "convert"] }
+                    }
+                },
+                {
+                    "name": "Exit All Positions",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/positions", "host": ["{{base_url}}"], "path": ["v2", "positions"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "07 — Funds & Margin",
+            "item": [
+                {
+                    "name": "Get Fund Limit",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/fundlimit", "host": ["{{base_url}}"], "path": ["v2", "fundlimit"] }
+                    }
+                },
+                {
+                    "name": "Single Margin Calculator",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"dhanClientId\": \"{{client_id}}\",\n    \"exchangeSegment\": \"NSE_EQ\",\n    \"transactionType\": \"BUY\",\n    \"quantity\": 5,\n    \"productType\": \"CNC\",\n    \"securityId\": \"{{security_id_hdfcbank}}\",\n    \"price\": 1428,\n    \"triggerPrice\": 0\n}" },
+                        "url": { "raw": "{{base_url}}/v2/margincalculator", "host": ["{{base_url}}"], "path": ["v2", "margincalculator"] }
+                    }
+                },
+                {
+                    "name": "Multi Margin Calculator",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"includePosition\": true,\n    \"includeOrders\": true,\n    \"scripts\": [\n        {\n            \"exchangeSegment\": \"NSE_EQ\",\n            \"transactionType\": \"BUY\",\n            \"quantity\": 100,\n            \"productType\": \"CNC\",\n            \"securityId\": \"{{security_id_hdfcbank}}\",\n            \"price\": 1500\n        }\n    ]\n}" },
+                        "url": { "raw": "{{base_url}}/v2/margincalculator/multi", "host": ["{{base_url}}"], "path": ["v2", "margincalculator", "multi"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "08 — Trader's Control",
+            "item": [
+                {
+                    "name": "Get Kill Switch Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/killswitch", "host": ["{{base_url}}"], "path": ["v2", "killswitch"] }
+                    }
+                },
+                {
+                    "name": "Activate Kill Switch",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/killswitch?killSwitchStatus=ACTIVATE", "host": ["{{base_url}}"], "path": ["v2", "killswitch"], "query": [{ "key": "killSwitchStatus", "value": "ACTIVATE" }] }
+                    }
+                },
+                {
+                    "name": "Deactivate Kill Switch",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/killswitch?killSwitchStatus=DEACTIVATE", "host": ["{{base_url}}"], "path": ["v2", "killswitch"], "query": [{ "key": "killSwitchStatus", "value": "DEACTIVATE" }] }
+                    }
+                },
+                {
+                    "name": "Set P&L Exit",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"profitValue\": \"1500.00\",\n    \"lossValue\": \"500.00\",\n    \"productType\": [\"INTRADAY\", \"DELIVERY\"],\n    \"enableKillSwitch\": true\n}" },
+                        "url": { "raw": "{{base_url}}/v2/pnlExit", "host": ["{{base_url}}"], "path": ["v2", "pnlExit"] }
+                    }
+                },
+                {
+                    "name": "Get P&L Exit Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/pnlExit", "host": ["{{base_url}}"], "path": ["v2", "pnlExit"] }
+                    }
+                },
+                {
+                    "name": "Stop P&L Exit",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/pnlExit", "host": ["{{base_url}}"], "path": ["v2", "pnlExit"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "09 — Statements",
+            "item": [
+                {
+                    "name": "Ledger Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/ledger?from-date=2026-01-01&to-date=2026-03-30", "host": ["{{base_url}}"], "path": ["v2", "ledger"], "query": [{ "key": "from-date", "value": "2026-01-01" }, { "key": "to-date", "value": "2026-03-30" }] }
+                    }
+                },
+                {
+                    "name": "Trade History",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/trades/2026-01-01/2026-03-30/0", "host": ["{{base_url}}"], "path": ["v2", "trades", "2026-01-01", "2026-03-30", "0"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "10 — Market Data (REST)",
+            "item": [
+                {
+                    "name": "LTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "client-id", "value": "{{client_id}}" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"NSE_EQ\": [2885, 11536, 1333]\n}" },
+                        "url": { "raw": "{{base_url}}/v2/marketfeed/ltp", "host": ["{{base_url}}"], "path": ["v2", "marketfeed", "ltp"] }
+                    }
+                },
+                {
+                    "name": "OHLC",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "client-id", "value": "{{client_id}}" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"NSE_EQ\": [2885, 11536, 1333]\n}" },
+                        "url": { "raw": "{{base_url}}/v2/marketfeed/ohlc", "host": ["{{base_url}}"], "path": ["v2", "marketfeed", "ohlc"] }
+                    }
+                },
+                {
+                    "name": "Full Quote (with Depth)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "client-id", "value": "{{client_id}}" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"NSE_EQ\": [2885]\n}" },
+                        "url": { "raw": "{{base_url}}/v2/marketfeed/quote", "host": ["{{base_url}}"], "path": ["v2", "marketfeed", "quote"] }
+                    }
+                },
+                {
+                    "name": "Historical Data (Daily)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"securityId\": \"{{security_id_hdfcbank}}\",\n    \"exchangeSegment\": \"NSE_EQ\",\n    \"instrument\": \"EQUITY\",\n    \"expiryCode\": 0,\n    \"oi\": false,\n    \"fromDate\": \"2026-01-01\",\n    \"toDate\": \"2026-03-30\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/charts/historical", "host": ["{{base_url}}"], "path": ["v2", "charts", "historical"] }
+                    }
+                },
+                {
+                    "name": "Historical Data (Intraday)",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"securityId\": \"{{security_id_hdfcbank}}\",\n    \"exchangeSegment\": \"NSE_EQ\",\n    \"instrument\": \"EQUITY\",\n    \"interval\": \"5\",\n    \"oi\": false,\n    \"fromDate\": \"2026-03-28 09:15:00\",\n    \"toDate\": \"2026-03-28 15:30:00\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/charts/intraday", "host": ["{{base_url}}"], "path": ["v2", "charts", "intraday"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "11 — Options",
+            "item": [
+                {
+                    "name": "Get Expiry List",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "client-id", "value": "{{client_id}}" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"UnderlyingScrip\": 13,\n    \"UnderlyingSeg\": \"IDX_I\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/optionchain/expirylist", "host": ["{{base_url}}"], "path": ["v2", "optionchain", "expirylist"] }
+                    }
+                },
+                {
+                    "name": "Get Option Chain",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "client-id", "value": "{{client_id}}" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"UnderlyingScrip\": 13,\n    \"UnderlyingSeg\": \"IDX_I\",\n    \"Expiry\": \"2026-04-24\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/optionchain", "host": ["{{base_url}}"], "path": ["v2", "optionchain"] }
+                    }
+                },
+                {
+                    "name": "Expired Options Data",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"exchangeSegment\": \"NSE_FNO\",\n    \"interval\": \"5\",\n    \"securityId\": 13,\n    \"instrument\": \"OPTIDX\",\n    \"expiryFlag\": \"MONTH\",\n    \"expiryCode\": 1,\n    \"strike\": \"ATM\",\n    \"drvOptionType\": \"CALL\",\n    \"requiredData\": [\"open\", \"high\", \"low\", \"close\", \"volume\", \"iv\", \"oi\"],\n    \"fromDate\": \"2026-03-01\",\n    \"toDate\": \"2026-03-30\"\n}" },
+                        "url": { "raw": "{{base_url}}/v2/charts/rollingoption", "host": ["{{base_url}}"], "path": ["v2", "charts", "rollingoption"] }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "12 — EDIS",
+            "item": [
+                {
+                    "name": "Generate T-PIN",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/edis/tpin", "host": ["{{base_url}}"], "path": ["v2", "edis", "tpin"] }
+                    }
+                },
+                {
+                    "name": "Generate eDIS Form",
+                    "request": {
+                        "method": "POST",
+                        "header": [{ "key": "Content-Type", "value": "application/json" }],
+                        "body": { "mode": "raw", "raw": "{\n    \"isin\": \"INE733E01010\",\n    \"qty\": 1,\n    \"exchange\": \"NSE\",\n    \"segment\": \"EQ\",\n    \"bulk\": false\n}" },
+                        "url": { "raw": "{{base_url}}/v2/edis/form", "host": ["{{base_url}}"], "path": ["v2", "edis", "form"] }
+                    }
+                },
+                {
+                    "name": "eDIS Status (All)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": { "raw": "{{base_url}}/v2/edis/inquire/ALL", "host": ["{{base_url}}"], "path": ["v2", "edis", "inquire", "ALL"] }
+                    }
+                }
+            ]
+        }
+    ]
+}

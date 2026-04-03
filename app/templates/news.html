@@ -2,69 +2,99 @@
 {% block title %}Market News — StockPulse{% endblock %}
 {% block content %}
 <div class="bc"><a href="/">Home</a><span class="sep">/</span><span>News</span></div>
-<div class="sh"><span class="st"><i class="bi bi-newspaper" style="color:var(--accent)"></i> Market News</span></div>
-
-<!-- Category Filter -->
-<div class="tabs" style="margin-bottom:12px">
-    <button class="tab active" onclick="filterNews('all',this)">All</button>
-    <button class="tab" onclick="filterNews('Market',this)">Market</button>
-    <button class="tab" onclick="filterNews('Sector',this)">Sector</button>
-    <button class="tab" onclick="filterNews('Stock',this)">Stock</button>
-    <button class="tab" onclick="filterNews('Global',this)">Global</button>
-    <button class="tab" onclick="filterNews('IPO',this)">IPO</button>
-    <button class="tab" onclick="filterNews('Policy',this)">Policy</button>
+<div class="sh">
+    <span class="st"><i class="bi bi-newspaper" style="color:var(--accent)"></i> Market News</span>
+    <span style="font-size:.65rem;color:var(--text3)">{{ total }} articles</span>
 </div>
 
-<!-- Breaking News Banner -->
+<!-- Category Filter Tabs (server-side links) -->
+<div class="tabs" style="margin-bottom:12px;flex-wrap:wrap">
+    <a href="/news?category=all" class="tab {% if category=='all' %}active{% endif %}">All</a>
+    <a href="/news?category=Market+Pulse" class="tab {% if category=='Market Pulse' %}active{% endif %}">Market Pulse</a>
+    <a href="/news?category=Stock+Alert" class="tab {% if category=='Stock Alert' %}active{% endif %}">Stock Alert</a>
+    <a href="/news?category=Sector+Watch" class="tab {% if category=='Sector Watch' %}active{% endif %}">Sector Watch</a>
+    <a href="/news?category=IPO" class="tab {% if category=='IPO' %}active{% endif %}">IPO</a>
+    <a href="/news?category=Global+Impact" class="tab {% if category=='Global Impact' %}active{% endif %}">Global Impact</a>
+    <a href="/news?category=Policy+%26+Regulation" class="tab {% if category=='Policy & Regulation' %}active{% endif %}">Policy</a>
+    <a href="/news?category=Expert+Opinion" class="tab {% if category=='Expert Opinion' %}active{% endif %}">Expert</a>
+</div>
+
+{% if not news %}
+<!-- Empty State -->
+<div class="empty-state" style="text-align:center;padding:60px 20px">
+    <i class="bi bi-newspaper" style="font-size:2.5rem;color:var(--text3);display:block;margin-bottom:12px"></i>
+    <div style="font-size:.85rem;font-weight:600;margin-bottom:4px;color:var(--text)">No articles yet</div>
+    <div style="font-size:.72rem;color:var(--text3)">News articles are being fetched. Refresh in a minute.</div>
+</div>
+{% else %}
+
+<!-- Breaking News -->
 {% for article in news if article.is_breaking %}
-<div class="card news-item" data-cat="{{ article.category }}" style="margin-bottom:12px;border-color:var(--red);border-width:1px">
+<div class="card news-card" style="margin-bottom:12px;border-color:var(--red);border-width:1px;border-radius:14px">
+    <a href="{{ article.url }}" target="_blank" rel="noopener" class="news-link" aria-label="{{ article.title }}"></a>
     <div class="card-body" style="padding:12px 14px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
             <span class="news-breaking">BREAKING</span>
-            <span class="news-cat" style="background:var(--red-bg);color:var(--red)">{{ article.category }}</span>
+            {% set cat = article.category %}
+            <span class="news-cat" style="background:{% if cat=='Market Pulse' %}var(--accent-bg);color:var(--accent){% elif cat=='Stock Alert' %}var(--green-bg);color:var(--green){% elif cat=='Sector Watch' %}rgba(249,115,22,.1);color:#f97316{% elif cat=='Global Impact' %}rgba(167,139,250,.1);color:var(--purple){% elif cat=='IPO' %}rgba(245,158,11,.1);color:var(--gold){% elif cat=='Policy & Regulation' %}rgba(100,116,139,.15);color:var(--text2){% elif cat=='Expert Opinion' %}rgba(139,92,246,.15);color:#a78bfa{% else %}rgba(100,116,139,.1);color:var(--text3){% endif %}">{{ cat }}</span>
+            {% if article.sentiment %}<span class="news-sentiment sentiment-{{ article.sentiment|lower }}">{% if article.sentiment == 'Bullish' %}<i class="bi bi-arrow-up-circle-fill"></i>{% elif article.sentiment == 'Bearish' %}<i class="bi bi-arrow-down-circle-fill"></i>{% elif article.sentiment == 'Mixed' %}<i class="bi bi-arrow-left-right"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %} {{ article.sentiment }}</span>{% endif %}
         </div>
         <div class="news-title" style="font-size:.88rem">{{ article.title }}</div>
         <div class="news-summary">{{ article.summary }}</div>
         <div class="news-meta">
-            <span><i class="bi bi-clock"></i> {{ article.timestamp }}</span>
+            <span><i class="bi bi-clock"></i> {{ article.published_at|timeago }}</span>
             <span>{{ article.source }}</span>
-            {% for sym in article.related_symbols %}
-            <a href="/stock/{{ sym }}" style="color:var(--accent);font-weight:600">{{ sym }}</a>
+            {% for sym in article.related_stocks %}
+            <a href="/stock/{{ sym }}" style="color:var(--accent);font-weight:600;position:relative;z-index:2">{{ sym }}</a>
             {% endfor %}
         </div>
     </div>
 </div>
 {% endfor %}
 
-<!-- All News -->
+<!-- All News Grid -->
 <div style="display:grid;gap:10px">
     {% for article in news if not article.is_breaking %}
-    <div class="news-card news-item" data-cat="{{ article.category }}">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-            <span class="news-cat" style="background:{% if article.category=='Market' %}var(--accent-bg);color:var(--accent){% elif article.category=='Sector' %}rgba(249,115,22,.1);color:#f97316{% elif article.category=='Stock' %}var(--green-bg);color:var(--green){% elif article.category=='Global' %}rgba(167,139,250,.1);color:var(--purple){% elif article.category=='IPO' %}rgba(245,158,11,.1);color:var(--gold){% else %}rgba(100,116,139,.15);color:var(--text2){% endif %}">{{ article.category }}</span>
-            <span style="font-size:.6rem;color:var(--text3)">{{ article.timestamp }}</span>
+    <div class="news-card">
+        <a href="{{ article.url }}" target="_blank" rel="noopener" class="news-link" aria-label="{{ article.title }}"></a>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
+            {% set cat = article.category %}
+            <span class="news-cat" style="background:{% if cat=='Market Pulse' %}var(--accent-bg);color:var(--accent){% elif cat=='Stock Alert' %}var(--green-bg);color:var(--green){% elif cat=='Sector Watch' %}rgba(249,115,22,.1);color:#f97316{% elif cat=='Global Impact' %}rgba(167,139,250,.1);color:var(--purple){% elif cat=='IPO' %}rgba(245,158,11,.1);color:var(--gold){% elif cat=='Policy & Regulation' %}rgba(100,116,139,.15);color:var(--text2){% elif cat=='Expert Opinion' %}rgba(139,92,246,.15);color:#a78bfa{% else %}rgba(100,116,139,.1);color:var(--text3){% endif %}">{{ cat }}</span>
+            {% if article.sentiment %}<span class="news-sentiment sentiment-{{ article.sentiment|lower }}">{% if article.sentiment == 'Bullish' %}<i class="bi bi-arrow-up-circle-fill"></i>{% elif article.sentiment == 'Bearish' %}<i class="bi bi-arrow-down-circle-fill"></i>{% elif article.sentiment == 'Mixed' %}<i class="bi bi-arrow-left-right"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %} {{ article.sentiment }}</span>{% endif %}
+            <span style="font-size:.6rem;color:var(--text3)">{{ article.published_at|timeago }}</span>
         </div>
         <div class="news-title">{{ article.title }}</div>
         <div class="news-summary">{{ article.summary }}</div>
         <div class="news-meta">
             <span><i class="bi bi-journal-text"></i> {{ article.source }}</span>
-            {% for sym in article.related_symbols %}
-            <a href="/stock/{{ sym }}" style="color:var(--accent);font-weight:600">{{ sym }}</a>
+            {% for sym in article.related_stocks %}
+            <a href="/stock/{{ sym }}" style="color:var(--accent);font-weight:600;position:relative;z-index:2">{{ sym }}</a>
             {% endfor %}
         </div>
     </div>
     {% endfor %}
 </div>
-{% endblock %}
 
-{% block extra_js %}
-<script>
-function filterNews(cat,btn){
-    document.querySelectorAll('.tabs .tab').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.news-item').forEach(el=>{
-        el.style.display=(cat==='all'||el.dataset.cat===cat)?'':'none';
-    });
-}
-</script>
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-top:20px;padding-bottom:12px">
+    {% if page > 1 %}
+    <a href="/news?page={{ page-1 }}&category={{ category|urlencode }}" class="page-btn"><i class="bi bi-chevron-left"></i> Prev</a>
+    {% endif %}
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}
+        <span class="page-btn active">{{ p }}</span>
+        {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+        <a href="/news?page={{ p }}&category={{ category|urlencode }}" class="page-btn">{{ p }}</a>
+        {% elif p == page - 3 or p == page + 3 %}
+        <span style="color:var(--text3);font-size:.7rem">...</span>
+        {% endif %}
+    {% endfor %}
+    {% if page < total_pages %}
+    <a href="/news?page={{ page+1 }}&category={{ category|urlencode }}" class="page-btn">Next <i class="bi bi-chevron-right"></i></a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endif %}
 {% endblock %}
