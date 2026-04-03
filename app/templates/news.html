@@ -4,10 +4,11 @@
 <div class="bc"><a href="/">Home</a><span class="sep">/</span><span>News</span></div>
 <div class="sh">
     <span class="st"><i class="bi bi-newspaper" style="color:var(--accent)"></i> Market News</span>
-    <span style="font-size:.65rem;color:var(--text3)">{{ total }} articles</span>
+    <span id="news-count" style="font-size:.65rem;color:var(--text3)">{{ total }} articles</span>
+    <span id="live-dot" style="margin-left:auto;font-size:.58rem;color:var(--green);display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 2s ease-in-out infinite"></span>LIVE</span>
 </div>
 
-<!-- Category Filter Tabs (server-side links) -->
+<!-- Category Filter Tabs -->
 <div class="tabs" style="margin-bottom:12px;flex-wrap:wrap">
     <a href="/news?category=all" class="tab {% if category=='all' %}active{% endif %}">All</a>
     <a href="/news?category=Market+Pulse" class="tab {% if category=='Market Pulse' %}active{% endif %}">Market Pulse</a>
@@ -19,12 +20,12 @@
     <a href="/news?category=Expert+Opinion" class="tab {% if category=='Expert Opinion' %}active{% endif %}">Expert</a>
 </div>
 
+<div id="news-feed">
 {% if not news %}
-<!-- Empty State -->
 <div class="empty-state" style="text-align:center;padding:60px 20px">
     <i class="bi bi-newspaper" style="font-size:2.5rem;color:var(--text3);display:block;margin-bottom:12px"></i>
     <div style="font-size:.85rem;font-weight:600;margin-bottom:4px;color:var(--text)">No articles yet</div>
-    <div style="font-size:.72rem;color:var(--text3)">News articles are being fetched. Refresh in a minute.</div>
+    <div style="font-size:.72rem;color:var(--text3)">News articles are being fetched. Will auto-refresh in a moment.</div>
 </div>
 {% else %}
 
@@ -97,4 +98,31 @@
 {% endif %}
 
 {% endif %}
+</div>
+
+<script>
+(function(){
+    var feed = document.getElementById('news-feed');
+    var count = document.getElementById('news-count');
+    if (!feed) return;
+
+    setInterval(function(){
+        fetch(window.location.href)
+            .then(function(r){ return r.text(); })
+            .then(function(html){
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var newFeed = doc.getElementById('news-feed');
+                var newCount = doc.getElementById('news-count');
+                if (newFeed && feed.innerHTML !== newFeed.innerHTML) {
+                    feed.innerHTML = newFeed.innerHTML;
+                }
+                if (newCount && count) {
+                    count.textContent = newCount.textContent;
+                }
+            })
+            .catch(function(){});
+    }, 60000);
+})();
+</script>
 {% endblock %}
