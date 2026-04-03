@@ -193,6 +193,7 @@
             <div class="hero-stat">Open <span>{{ "{:,.0f}".format(h.open) }}</span></div>
             <div class="hero-stat">High <span>{{ "{:,.0f}".format(h.high) }}</span></div>
             <div class="hero-stat">Low <span>{{ "{:,.0f}".format(h.low) }}</span></div>
+            {% if h.volume %}<div class="hero-stat">Vol <span>{{ "{:,.0f}".format(h.volume) }}</span></div>{% endif %}
             {% if h.pe %}<div class="hero-stat">PE <span>{{ "%.1f"|format(h.pe) }}</span></div>{% endif %}
             {% if h.advances is defined and h.constituents_total %}
             <div class="hero-stat">Advancing <span class="text-up">{{ h.advances }}/{{ h.constituents_total }}</span></div>

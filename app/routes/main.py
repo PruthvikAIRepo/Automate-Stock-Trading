@@ -205,6 +205,13 @@ def index_detail(token):
         from app.services.market_ai import generate_index_narrative
         ai_narrative = generate_index_narrative(index_info, constituents)
 
+    # Build comparison list — all indices except current one
+    compare_list = [
+        {"token": i["token"], "name": i["name"], "exchange": i.get("exchange", "NSE")}
+        for i in idx_data.get("all_table", [])
+        if i["token"] != token
+    ]
+
     return render_template(
         "index_detail.html",
         index=index_info,
@@ -212,6 +219,7 @@ def index_detail(token):
         constituents=constituents,
         ai_narrative=ai_narrative,
         is_market_hours=is_market_hours(),
+        compare_list=compare_list,
     )
 
 
@@ -294,14 +302,15 @@ def api_index_history():
     if not candles:
         return jsonify({"candles": []})
 
-    # Format: [[timestamp_ms, O, H, L, C], ...]
+    # Format: [[timestamp, O, H, L, C, Volume], ...]
     # Angel One returns: [DateTime, O, H, L, C, Volume]
     formatted = []
     for c in candles:
         try:
             from datetime import datetime
             ts = int(datetime.strptime(c[0], "%Y-%m-%dT%H:%M:%S%z").timestamp())
-            formatted.append([ts, c[1], c[2], c[3], c[4]])
+            vol = c[5] if len(c) > 5 else 0
+            formatted.append([ts, c[1], c[2], c[3], c[4], vol])
         except (ValueError, IndexError):
             continue
 

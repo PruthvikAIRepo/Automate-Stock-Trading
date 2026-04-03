@@ -41,15 +41,31 @@
 
 {# ═══ CHART ═══ #}
 <div class="idx-chart-card">
-    <div class="idx-tf-bar">
-        <button class="idx-tf" data-tf="1D">1D</button>
-        <button class="idx-tf" data-tf="1W">1W</button>
-        <button class="idx-tf" data-tf="1M">1M</button>
-        <button class="idx-tf active" data-tf="3M">3M</button>
-        <button class="idx-tf" data-tf="6M">6M</button>
-        <button class="idx-tf" data-tf="1Y">1Y</button>
-        <button class="idx-tf" data-tf="5Y">5Y</button>
+    <div class="idx-chart-toolbar">
+        <div class="idx-tf-bar">
+            <button class="idx-tf" data-tf="1D">1D</button>
+            <button class="idx-tf" data-tf="1W">1W</button>
+            <button class="idx-tf" data-tf="1M">1M</button>
+            <button class="idx-tf active" data-tf="3M">3M</button>
+            <button class="idx-tf" data-tf="6M">6M</button>
+            <button class="idx-tf" data-tf="1Y">1Y</button>
+            <button class="idx-tf" data-tf="5Y">5Y</button>
+        </div>
+        {% if compare_list %}
+        <div class="idx-compare-wrap">
+            <select id="compareSelect" class="idx-compare-select" onchange="toggleCompare(this.value)">
+                <option value="">Compare with...</option>
+                {% for c in compare_list[:40] %}
+                <option value="{{ c.token }}|{{ c.exchange }}|{{ c.name }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+            <button id="compareClear" class="idx-compare-clear" style="display:none" onclick="clearCompare()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        {% endif %}
     </div>
+    <div id="compareLabel" class="idx-compare-label" style="display:none"></div>
     <div id="chart" class="idx-chart-container"></div>
     <div id="chartLoading" class="idx-chart-loading">
         <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i> Loading chart...
@@ -318,7 +334,10 @@ const chart = LightweightCharts.createChart(chartEl, {
 });
 
 let series = null;
+let volSeries = null;
+let compareSeries = null;
 let currentTf = '3M';
+let currentCandles = [];
 
 function loadChart(tf) {
     currentTf = tf;
@@ -326,17 +345,21 @@ function loadChart(tf) {
     document.querySelectorAll('.idx-tf').forEach(b => b.classList.remove('active'));
     document.querySelector(`.idx-tf[data-tf="${tf}"]`).classList.add('active');
 
+    // Clear comparison when switching timeframes
+    if (compareSeries) { clearCompare(); }
+
     fetch(`/api/index-history?token=${TOKEN}&exchange=${EXCHANGE}&tf=${tf}`)
         .then(r => r.json())
         .then(data => {
             document.getElementById('chartLoading').style.display = 'none';
 
-            if (series) chart.removeSeries(series);
+            if (series) { chart.removeSeries(series); series = null; }
+            if (volSeries) { chart.removeSeries(volSeries); volSeries = null; }
 
             const candles = data.candles || [];
             if (candles.length === 0) return;
+            currentCandles = candles;
 
-            // Area chart for intraday (1D), candlestick for everything else
             const useArea = (tf === '1D');
 
             if (useArea) {
@@ -369,6 +392,27 @@ function loadChart(tf) {
                 })));
             }
 
+            // Volume histogram below price
+            const hasVol = candles.some(c => c[5] && c[5] > 0);
+            if (hasVol) {
+                volSeries = chart.addHistogramSeries({
+                    priceFormat: { type: 'volume' },
+                    priceScaleId: 'vol',
+                });
+                chart.priceScale('vol').applyOptions({
+                    scaleMargins: { top: 0.82, bottom: 0 },
+                    drawTicks: false,
+                    borderVisible: false,
+                });
+                volSeries.setData(candles.map(c => ({
+                    time: c[0],
+                    value: c[5] || 0,
+                    color: c[4] >= c[1]
+                        ? 'rgba(0,208,156,.25)'
+                        : 'rgba(239,68,68,.25)',
+                })));
+            }
+
             chart.timeScale().fitContent();
         })
         .catch(() => {
@@ -376,12 +420,77 @@ function loadChart(tf) {
         });
 }
 
+// ── Index Comparison Overlay ──
+function toggleCompare(val) {
+    if (!val) { clearCompare(); return; }
+    const [cToken, cExchange, ...nameParts] = val.split('|');
+    const cName = nameParts.join('|');
+
+    if (compareSeries) { chart.removeSeries(compareSeries); compareSeries = null; }
+
+    fetch(`/api/index-history?token=${cToken}&exchange=${cExchange}&tf=${currentTf}`)
+        .then(r => r.json())
+        .then(data => {
+            const cCandles = data.candles || [];
+            if (cCandles.length === 0 || currentCandles.length === 0) return;
+
+            // Normalize both to % change from their first value
+            const baseStart = currentCandles[0][4];
+            const compStart = cCandles[0][4];
+            if (!baseStart || !compStart) return;
+
+            // Switch main series to % line for fair comparison
+            if (series) { chart.removeSeries(series); series = null; }
+            if (volSeries) { chart.removeSeries(volSeries); volSeries = null; }
+
+            const mainColor = IS_POSITIVE ? '#00D09C' : '#EF4444';
+            series = chart.addLineSeries({
+                color: mainColor,
+                lineWidth: 2,
+                title: '{{ index.name }}',
+            });
+            series.setData(currentCandles.map(c => ({
+                time: c[0],
+                value: ((c[4] - baseStart) / baseStart) * 100,
+            })));
+
+            compareSeries = chart.addLineSeries({
+                color: '#a78bfa',
+                lineWidth: 2,
+                lineStyle: 0,
+                title: cName,
+            });
+            compareSeries.setData(cCandles.map(c => ({
+                time: c[0],
+                value: ((c[4] - compStart) / compStart) * 100,
+            })));
+
+            // Show label
+            const lbl = document.getElementById('compareLabel');
+            lbl.style.display = '';
+            lbl.innerHTML = `<span style="color:${mainColor}">● {{ index.name }}</span> vs <span style="color:#a78bfa">● ${cName}</span> <span style="color:var(--text3)">(% change)</span>`;
+
+            document.getElementById('compareClear').style.display = '';
+            chart.timeScale().fitContent();
+        });
+}
+
+function clearCompare() {
+    if (compareSeries) { chart.removeSeries(compareSeries); compareSeries = null; }
+    document.getElementById('compareLabel').style.display = 'none';
+    document.getElementById('compareClear').style.display = 'none';
+    const sel = document.getElementById('compareSelect');
+    if (sel) sel.value = '';
+    // Reload chart in normal mode (candlestick + volume)
+    loadChart(currentTf);
+}
+
 // Timeframe buttons
 document.querySelectorAll('.idx-tf').forEach(btn => {
     btn.addEventListener('click', () => loadChart(btn.dataset.tf));
 });
 
-// Initial load — 3M shows candlestick chart by default
+// Initial load
 loadChart('3M');
 
 // Resize

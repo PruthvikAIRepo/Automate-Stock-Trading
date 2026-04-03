@@ -551,6 +551,19 @@
             .idx-sector-donut-left{margin-bottom:8px}
         }
 
+        /* Chart toolbar — compare + timeframes */
+        .idx-chart-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+        .idx-compare-wrap{display:flex;align-items:center;gap:4px}
+        .idx-compare-select{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.6rem;font-weight:600;color:var(--text2);cursor:pointer;max-width:180px;outline:none}
+        .idx-compare-select:focus{border-color:var(--accent)}
+        .idx-compare-clear{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:5px;padding:3px 7px;color:#ef4444;cursor:pointer;font-size:.6rem;line-height:1}
+        .idx-compare-clear:hover{background:rgba(239,68,68,.25)}
+        .idx-compare-label{font-size:.65rem;font-weight:600;padding:6px 12px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+        @media(max-width:640px){
+            .idx-chart-toolbar{flex-direction:column;align-items:flex-start}
+            .idx-compare-select{max-width:100%;width:100%}
+        }
+
         /* Sector perf header */
         .sec-tf-bar{display:flex;gap:3px}
         .sec-tf{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:3px 9px;font-size:.58rem;font-weight:700;color:var(--text3);cursor:pointer;transition:all .15s}
